@@ -3,7 +3,6 @@
 
 
 'Hexalyzer' assists you with analyzing binary files.
-Still very poor performance with files bigger 1MB, but I'm at it ^^
 
 This tool is meant as an educational helper, always 
 respect the file's original rights ;)

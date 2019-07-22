@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+	Root identifies this file as an Hexalyzer project.
+	The "version" attribute is mandatory.
+-->
+<Hexalyzer-Project version="0.1">
+
+	<!--
+		Name of project
+	-->
+	<Name>Example project #1</Name>
+
+	<!--
+		File being analysed
+		Path is optional, either absolute or relative (to this project file)
+	-->
+	<Source>Example1.bin</Source>
+
+	<!--
+		Project nodes
+		Every project will have at least 1 node, even newly created ones 
+		(a placeholder with it's length being the source file length). 
+		So the sum of all nodes matches the file size.
+	-->
+	<Nodes>
+
+		<!--
+			Node specification:
+
+			* Mandatory attributes:
+			- index:int         Sequential number, starting with 0
+			- offset:int        Offset into source file
+			- length:int        Length of this node in bytes (=0 for comments)
+			
+			* Optional attributes:
+			- type:string       A specific type with optional namespace, 
+			                    either standard or Hexalyzer-specific types.
+													If not given node is treated as yet unprocessed data.
+			                    Following a non-comprehensive list of types known:
+			                    - [System.] [S]Byte, [U]Int{16|32|64}, Char, Single, Double, Boolean
+			                    - [Hexalyzer.Datatypes.] AsciiChar, {Ascii|Wide|Var}String
+
+			* Can also contain an optional remark as its value.
+		-->
+
+		<!--
+			Node #0 at offset=0 with length=4 and of type=System.UInt32, contains remark "The magic id"
+		-->
+		<Node index="0" offset="0" length="4" type="System.UInt32">The magic id (DEADBEEFh)</Node>
+
+		<!--
+				Placeholder, not analysed yet
+		-->
+		<Node index="1" offset="4" length="4" />
+
+		<!--
+			Node #2 at offset=8 with length=4 and also of type=System.UInt32, analyzer should find this a "file length"
+		-->
+		<Node index="2" offset="8" length="4" type="UInt32">&lt;- Filesize</Node>
+
+		<!--
+				Placeholder, not analysed yet
+		-->
+		<Node index="3" offset="12" length="116" />
+
+		<!--
+			Node #4 at offset=128 with length=31 and of type=[Hexalyzer.Datatypes.]AsciiString w/o remark.
+			Note that the length given includes all bytes used to define an AsciiString, its length (4 bytes) and the actual
+			string value (26 Ascii chars) incl. any null-terminator (1 byte for Ascii) => 4+26+1 = 31.
+		-->
+		<Node index="4" offset="128" length="31" type="AsciiString" />
+
+		<!--
+				Placeholder, not analysed yet
+		-->
+		<Node index="5" offset="159" length="33" />
+		
+		<!--
+			Node #6 at offset=192 with negative length=31 and of type=[Hexalyzer.Datatypes.]VarString, also w/o remark.
+			Same string as node #4, but with negated length, so a 2-byte Unicode with actual length times 2.
+		-->
+		<Node index="6" offset="192" length="58" type="VarString" />
+
+		<!--
+				Placeholder, not analysed yet
+		-->
+		<Node index="7" offset="250" length="774" />
+
+	</Nodes>
+
+</Hexalyzer-Project>

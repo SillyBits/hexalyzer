@@ -1,0 +1,50 @@
+﻿<Application x:Class="Hexalyzer.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Hexalyzer"
+             StartupUri="MainWindow.xaml">
+
+    <Application.Resources>
+
+		<ControlTemplate x:Key="ToolsWindowTemplate">
+
+			<Grid x:Name="grid">
+
+				<Grid.Resources>
+
+					<LinearGradientBrush x:Key="HeaderBrush" StartPoint="0,0" EndPoint="0,1">
+						<GradientStop Offset="0" Color="Red" />
+						<GradientStop Offset="1" Color="White" />
+					</LinearGradientBrush>
+
+				</Grid.Resources>
+
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="auto" />
+					<RowDefinition Height="auto" />
+				</Grid.RowDefinitions>
+
+				<StackPanel Grid.Row="0" Grid.Column="0"
+							Orientation="Horizontal" Width="auto" Height="auto" HorizontalAlignment="Stretch" 
+							Background="{StaticResource HeaderBrush}">
+
+					<Image Source="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=Image}" 
+						   Margin="0,2,0,0" Width="20" Height="20" />
+
+					<Label Content="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=Title}" 
+						   Width="auto" Height="auto" Margin="0" HorizontalContentAlignment="Stretch" />
+
+				</StackPanel>
+
+				<ContentPresenter x:Name="Content" Grid.Row="1" Grid.Column="0" />
+
+			</Grid>
+
+		</ControlTemplate>
+
+	</Application.Resources>
+	
+</Application>

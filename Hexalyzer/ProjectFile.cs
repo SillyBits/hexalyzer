@@ -62,7 +62,7 @@ namespace Hexalyzer
 		/// (a placeholder with it's length being the source file length). 
 		/// So the sum of all nodes matches the file size.
 		/// </summary>
-		public List<ProjectNode> Nodes { get; private set; }
+		public ProjectNodes Nodes { get; private set; }
 
 		/// <summary>
 		/// Total size of source file being analyzed
@@ -441,7 +441,7 @@ namespace Hexalyzer
 			Filename = filename;
 			Project = project;
 			Source = source;
-			Nodes = new List<ProjectNode>();
+			Nodes = new ProjectNodes();
 
 			if (Source != null)
 			{
@@ -609,6 +609,14 @@ namespace Hexalyzer
 		private bool _IsModified;
 		internal FileBuffer<byte> _DataBuffer;
 
+	}
+
+
+	/// <summary>
+	/// List of nodes
+	/// </summary>
+	public class ProjectNodes : List<ProjectNode>
+	{
 	}
 
 

@@ -64,8 +64,32 @@ namespace Hexalyzer
 	public static class Settings
 	{
 		#region Core
-		public const string APP_NAME	= "Hexalyzer";
-		public const string APP_VERSION	= "v0.1 alpha";
+		public const string APP_NAME = "Hexalyzer";
+
+		public static string APP_VERSION
+		{
+			get
+			{
+				if (_AppVersion == null)
+				{
+					Assembly ass = Assembly.GetExecutingAssembly();
+					var versions = ass.GetCustomAttributes<AssemblyInformationalVersionAttribute>() 
+								   as AssemblyInformationalVersionAttribute[];
+					AssemblyInformationalVersionAttribute attr = versions.FirstOrDefault();
+					if (attr != null)
+					{
+						_AppVersion = attr.InformationalVersion;
+					}
+					else
+					{
+						var vers = FileVersionInfo.GetVersionInfo(ass.Location);
+						_AppVersion = vers.ProductVersion;
+					}
+				}
+
+				return _AppVersion;
+			}
+		}
 
 		public static string APP_PATH
 		{
@@ -206,6 +230,8 @@ namespace Hexalyzer
 										 FontWeights.Normal, FontStretches.Normal);
 		}
 
+
+		private static string _AppVersion;
 		private static string _AppPath;
 
 	}

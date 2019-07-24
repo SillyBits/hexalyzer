@@ -215,15 +215,12 @@
 
 			</MenuItem>
 
-			<MenuItem Header="Help" IsEnabled="False">
-				<!--
-				<MenuItem Header="{lang:Translate Key=MainWindow.Menu.Help.Changelog}" 
-						  ToolTip="{lang:Translate Key=MainWindow.Menu.Help.Changelog.TT}" 
-						  Click="Help_Changelog_Click" />
-				<MenuItem Header="{lang:Translate Key=MainWindow.Menu.Help.About}" 
-						  ToolTip="{lang:Translate Key=MainWindow.Menu.Help.About.TT}" 
-						  Click="Help_About_Click" />
-				-->
+			<MenuItem Header="Help">
+
+				<MenuItem Header="Changelog ..." ToolTip="Shows Changelog dialog" Click="Help_Changelog_Click" />
+
+				<MenuItem Header="About ..." ToolTip="Shows About dialog" Click="Help_About_Click" />
+				
 			</MenuItem>
 
 		</Menu>

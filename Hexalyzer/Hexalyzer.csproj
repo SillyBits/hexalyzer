@@ -67,7 +67,11 @@
     </ApplicationDefinition>
     <Compile Include="CoreLib\ConfigFile.cs" />
     <Compile Include="CoreLib\FactoryHelpers.cs" />
+    <Compile Include="CoreLib\ImageHandler.cs" />
     <Compile Include="CoreLib\Logger.cs" />
+    <Compile Include="Dialogs\ShowHtmlResDialog.xaml.cs">
+      <DependentUpon>ShowHtmlResDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Helper\DataBuffer.cs" />
     <Compile Include="Helper\Formatters.cs" />
     <Compile Include="Tools\ValuePreview.cs" />
@@ -85,6 +89,10 @@
     <Page Include="Dialogs\CreateProjectDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Dialogs\ShowHtmlResDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Tools\ToolsPanel.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -185,6 +193,8 @@
     <Resource Include="Resources\icons8\Toolbar.File.Save.png" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\About.res" />
+    <Content Include="Resources\Changelog.res" />
     <Content Include="Resources\icons8\Readme.txt" />
     <Resource Include="Resources\icons8\Toolbar.Tool.Analyze.png" />
     <Resource Include="Resources\Toolbar.Add.Split.png" />

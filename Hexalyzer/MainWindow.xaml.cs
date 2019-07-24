@@ -378,6 +378,21 @@ namespace Hexalyzer
 		}
 
 
+		private void Help_Changelog_Click(object sender, RoutedEventArgs e)
+		{
+			string filename = Path.Combine(Settings.RESOURCE_PATH, "Changelog.res");
+			string content = File.ReadAllText(filename);
+			Dialogs.ShowHtmlResDialog.Show("Changelog ...", content);
+		}
+
+		private void Help_About_Click(object sender, RoutedEventArgs e)
+		{
+			string filename = Path.Combine(Settings.RESOURCE_PATH, "About.res");
+			string content = File.ReadAllText(filename);
+			Dialogs.ShowHtmlResDialog.Show("About ...", content);
+		}
+
+
 		// Events from project file
 		private void CurrentProject_IsModifiedChanged(object sender, bool state)
 		{

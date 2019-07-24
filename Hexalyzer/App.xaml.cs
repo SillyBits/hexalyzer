@@ -115,6 +115,18 @@ namespace Hexalyzer
 			}
 		}
 
+		public const string RESOURCES = "Resources";
+		public static string RESOURCE_PATH
+		{
+			get
+			{
+				if (_ResourcePath == null)
+					_ResourcePath = Path.Combine(APP_PATH, RESOURCES);
+
+				return _ResourcePath;
+			}
+		}
+
 
 #if DEVENV
 		public static string DEFAULT_FILE;
@@ -233,6 +245,7 @@ namespace Hexalyzer
 
 		private static string _AppVersion;
 		private static string _AppPath;
+		private static string _ResourcePath;
 
 	}
 

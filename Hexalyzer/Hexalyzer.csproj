@@ -38,8 +38,7 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>
-    </ApplicationIcon>
+    <ApplicationIcon>Resources\Logo-128x128.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -196,6 +195,7 @@
     <Content Include="Resources\About.res" />
     <Content Include="Resources\Changelog.res" />
     <Content Include="Resources\icons8\Readme.txt" />
+    <Resource Include="Resources\Logo-128x128.ico" />
     <Resource Include="Resources\icons8\Toolbar.Tool.Analyze.png" />
     <Resource Include="Resources\Toolbar.Add.Split.png" />
     <Resource Include="Resources\Toolbar.View.DataBufferInfo.png" />

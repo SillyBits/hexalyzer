@@ -19,10 +19,6 @@ using System.Windows.Media.Animation;
 /*
  * TODO:
  * 
- * - Allow for editing remarks
- *   -> Should be easy peasy now with cursor handling and selection
- *      up and running, only updating screen might be tricky.
- *      Or we might use a temporary TextBox instance?
  * 
  */
 
@@ -247,7 +243,7 @@ namespace Hexalyzer
 				_ShowCaret();
 			}
 
-			// Trigger redraw with NOP
+			// Trigger redraw
 			Offset = _Offset;
 		}
 
@@ -267,7 +263,7 @@ namespace Hexalyzer
 
 			_HideCaret();
 
-			// Trigger redraw with NOP
+			// Trigger redraw
 			Offset = _Offset;
 		}
 
@@ -315,7 +311,7 @@ namespace Hexalyzer
 				_MaxRows = 0;
 			}
 
-			//_Render(); => Base should trigger this?
+			//_Render(); => base will trigger this
 			base.OnRenderSizeChanged(sizeInfo);
 		}
 
@@ -840,7 +836,7 @@ namespace Hexalyzer
 			//scroller.ViewportSize = _TotalRows + _RowAdjust;
 			scroller.ViewportSize = _MaxRows;
 
-			// Let analyzer know some aspect has changed
+			// Let analyzer know some aspect may have changed
 			if (_IsAnalyzerActive)
 				_StartAnalyzer();
 		}
@@ -1348,6 +1344,7 @@ namespace Hexalyzer
 					if (_Project == null)
 						break;
 
+					// Filesize checking
 					finding = Analyzers.CheckFilesizeCandidate(data, offset - node.Offset, _Project.Filesize);
 					if (finding != null)
 					{
@@ -1358,6 +1355,7 @@ namespace Hexalyzer
 					if (_AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 						break;
 
+					// String checking
 					finding = Analyzers.CheckStringCandidate(data, offset - node.Offset);
 					if (finding != null)
 					{

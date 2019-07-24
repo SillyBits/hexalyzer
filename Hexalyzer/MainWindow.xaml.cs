@@ -286,7 +286,7 @@ namespace Hexalyzer
 
 			if (!active) // <- Logic flipped as we're triggered after check was updated!
 			{
-				// Remove value preview
+				// Remove value preview panel
 				if (_ValuePreview == null)
 					throw new Exception("Invalid internal state! (value preview == null)");
 				Tools.Remove(_ValuePreview);
@@ -294,7 +294,7 @@ namespace Hexalyzer
 			}
 			else
 			{
-				// Add value preview
+				// Add value preview panel
 				if (_ValuePreview != null)
 					throw new Exception("Invalid internal state! (value preview != null)");
 				_ValuePreview = new Tools.ValuePreview(PrjView);
@@ -326,7 +326,7 @@ namespace Hexalyzer
 
 			if (!active) // <- Logic flipped as we're triggered after check was updated!
 			{
-				// Remove value preview
+				// Remove data buffer info panel
 				if (_DataBufferInfo == null)
 					throw new Exception("Invalid internal state! (data buffer view == null)");
 				Tools.Remove(_DataBufferInfo);
@@ -334,7 +334,7 @@ namespace Hexalyzer
 			}
 			else
 			{
-				// Add value preview
+				// Add data buffer info panel
 				if (_DataBufferInfo != null)
 					throw new Exception("Invalid internal state! (data buffer view != null)");
 				_DataBufferInfo = new Tools.DataBufferInfo();

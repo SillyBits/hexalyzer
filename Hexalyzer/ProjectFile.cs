@@ -14,6 +14,8 @@ using System.Xml;
  * 
  * - New type 'Structure' with just a blob of user-defined length.
  * 
+ * - Own IEnumerable + IEnumerator to allow for moving methods
+ *   like finding by offset/next/prev out of project file instance?
  * 
  */
 

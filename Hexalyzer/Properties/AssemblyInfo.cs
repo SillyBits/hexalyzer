@@ -25,4 +25,4 @@ using System.Windows;
 
 
 [assembly: AssemblyVersion("0.1.*")]
-[assembly: AssemblyInformationalVersion("0.1 alpha")]
+[assembly: AssemblyInformationalVersion("v0.1 alpha")]

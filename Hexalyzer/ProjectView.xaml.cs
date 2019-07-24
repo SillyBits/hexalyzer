@@ -167,6 +167,20 @@ namespace Hexalyzer
 			_CaretAnimTimer = null;
 		}
 
+		static ProjectView()
+		{
+			_HoverRectColor = new Color() { R = 0xEE, G = 0xEE, B = 0xEE, A = 0x60 };
+
+			_HoverRectBrush = new SolidColorBrush(_HoverRectColor);
+			_HoverRectBrush.Freeze();
+
+			_CaretPenShow = new Pen(Brushes.Black, 1);
+			_CaretPenShow.Freeze();
+			_CaretPenErase = new Pen(Brushes.Transparent, 1);
+			_CaretPenErase.Freeze();
+		}
+
+
 
 		public void DoKeyDown(KeyEventArgs e)
 		{
@@ -1024,25 +1038,10 @@ namespace Hexalyzer
 			}
 			else
 			{
-				List<Point> points = new List<Point>();
-				Func<TextColumn,Point,Point,Brush,Drawing> create = (col,a,b,brush) => {
+				Func<TextColumn, Point, Point, Brush, Drawing> create = (col, a, b, brush) => {
 					double min_x = col.Left + TextColumn.Margin;
 					double max_x = min_x + col.ContentWidth;
-					a.Y += 0.5;
-					b.Y -= 0.5;
-
-					// Start at top-left corner, traversing clock-wise
-					points.Clear();
-					points.Add(new Point(a.X  , a.Y));
-					points.Add(new Point(max_x, a.Y));
-					points.Add(new Point(max_x, b.Y - RenderHelper.RowHeight));
-					points.Add(new Point(b.X  , b.Y - RenderHelper.RowHeight));
-					points.Add(new Point(b.X  , b.Y));
-					points.Add(new Point(min_x, b.Y));
-					points.Add(new Point(min_x, a.Y + RenderHelper.RowHeight));
-					points.Add(new Point(a.X  , a.Y + RenderHelper.RowHeight));
-
-					return ShapeProvider.CreatePoly(points, brush);
+					return ShapeProvider.CreatePoly(a, b, min_x, max_x, brush);
 				};
 
 				// Selected target first
@@ -1273,25 +1272,10 @@ namespace Hexalyzer
 				}
 				else
 				{
-					List<Point> points = new List<Point>();
 					Func<TextColumn, Point, Point, Drawing> create = (column, a, b) => {
 						double min_x = column.Left + TextColumn.Margin;
 						double max_x = min_x + column.ContentWidth;
-						a.Y += 0.5;
-						b.Y -= 0.5;
-
-						// Start at top-left corner, traversing clock-wise
-						points.Clear();
-						points.Add(new Point(a.X, a.Y));
-						points.Add(new Point(max_x, a.Y));
-						points.Add(new Point(max_x, b.Y - RenderHelper.RowHeight));
-						points.Add(new Point(b.X, b.Y - RenderHelper.RowHeight));
-						points.Add(new Point(b.X, b.Y));
-						points.Add(new Point(min_x, b.Y));
-						points.Add(new Point(min_x, a.Y + RenderHelper.RowHeight));
-						points.Add(new Point(a.X, a.Y + RenderHelper.RowHeight));
-
-						return ShapeProvider.CreatePoly(points, brush);
+						return ShapeProvider.CreatePoly(a, b, min_x, max_x, brush);
 					};
 
 					dc.DrawDrawing(create(hex, hex_pt1, hex_pt2));
@@ -1511,15 +1495,15 @@ namespace Hexalyzer
 
 		private DrawingGroup _BackingStoreHovering = new DrawingGroup();
 		private Drawing _RowHoverRect;
-		private static Color _HoverRectColor = new Color() { R = 0xEE, G = 0xEE, B = 0xEE, A = 0x60 };
-		private static Brush _HoverRectBrush = new SolidColorBrush(_HoverRectColor);
+		private static Color _HoverRectColor;
+		private static Brush _HoverRectBrush;
 
 		private static TextColumn[] _Columns;
 		private TextColumn _ActiveColumn;
 
 		private DrawingGroup _BackingStoreCaret = new DrawingGroup();
-		private static Pen _CaretPenShow = new Pen(Brushes.Black, 1);
-		private static Pen _CaretPenErase = new Pen(Brushes.Transparent/*White*/, 1);
+		private static Pen _CaretPenShow;
+		private static Pen _CaretPenErase;
 		private bool? _IsCaretVisible;
 		private Point _CaretPos;
 		private Point _CaretPosLast;
@@ -1751,9 +1735,40 @@ namespace Hexalyzer
 		internal static Drawing CreateRect(Point start, Point end, Brush fill, Brush border = null, double thickness = 0)
 		{
 			var rectangle = new RectangleGeometry(new Rect(start, end));
+			rectangle.Freeze();
 
-			Pen pen = (border != null) ? new Pen(border, thickness) : null;
-			return new GeometryDrawing(fill, pen, rectangle);
+			Pen pen = null;
+			if (border != null)
+			{
+				pen = new Pen(border, thickness);
+				pen.Freeze();
+			}
+
+			Drawing drawing = new GeometryDrawing(fill, pen, rectangle);
+			drawing.Freeze();
+
+			return drawing;
+		}
+
+		internal static Drawing CreatePoly(Point start, Point end, double min_bounds, double max_bounds,
+										   Brush fill, Brush border = null, double thickness = 0)
+		{
+			double start_y = start.Y + 0.5;
+			double end_y   = end.Y   - 0.5;
+
+			// Start at top-left corner, traversing clock-wise
+			List<Point> points = new List<Point>();
+			points.Clear();
+			points.Add(new Point(start.X   , start_y));
+			points.Add(new Point(max_bounds, start_y));
+			points.Add(new Point(max_bounds, end_y - RenderHelper.RowHeight));
+			points.Add(new Point(end.X     , end_y - RenderHelper.RowHeight));
+			points.Add(new Point(end.X     , end_y));
+			points.Add(new Point(min_bounds, end_y));
+			points.Add(new Point(min_bounds, start_y + RenderHelper.RowHeight));
+			points.Add(new Point(start.X   , start_y + RenderHelper.RowHeight));
+
+			return CreatePoly(points, fill, border, thickness);
 		}
 
 		internal static Drawing CreatePoly(IEnumerable<Point> points, Brush fill, Brush border = null, double thickness = 0)
@@ -1762,17 +1777,29 @@ namespace Hexalyzer
 			Point start = new_points[0];
 			new_points.RemoveAt(0);
 			PolyLineSegment lines = new PolyLineSegment(new_points, false);
+			lines.Freeze();
 
 			PathFigure figure = new PathFigure();
 			figure.StartPoint = start;
 			figure.Segments.Add(lines);
+			figure.Freeze();
 
 			PathGeometry path = new PathGeometry();
 			path.Figures.Add(figure);
 			path.FillRule = FillRule.EvenOdd;
+			path.Freeze();
 
-			Pen pen = (border != null) ? new Pen(border, thickness) : null;
-			return new GeometryDrawing(fill, pen, path);
+			Pen pen = null;
+			if (border != null)
+			{
+				pen = new Pen(border, thickness);
+				pen.Freeze();
+			}
+
+			Drawing drawing = new GeometryDrawing(fill, pen, path);
+			drawing.Freeze();
+
+			return drawing;
 		}
 
 	}
@@ -2131,7 +2158,9 @@ namespace Hexalyzer
 		static RenderHelper()
 		{
 			IsDirtyCache = true;
+
 			FramePen = new Pen(Brushes.DarkGray, 1);
+			FramePen.Freeze();
 
 			_MaxWidth = new double[Enum.GetValues(typeof(Scope)).Length];
 		}

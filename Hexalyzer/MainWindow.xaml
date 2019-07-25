@@ -196,13 +196,7 @@
 						<Image Source="Resources/icons8/Toolbar.View.ValuePreview.png" />
 					</MenuItem.Icon>
 				</MenuItem>
-
-				<MenuItem x:Name="View_DataBufferInfo_Menu" Header="Data buffer info" Click="View_DataBufferInfo" IsCheckable="True">
-					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.View.DataBufferInfo.png" />
-					</MenuItem.Icon>
-				</MenuItem>
-
+		
 			</MenuItem>
 
 			<MenuItem x:Name="Tools_Menu" Header="Tools">
@@ -367,10 +361,6 @@
 
 				<ToggleButton x:Name="View_ValuePreview_TB" ToolTip="Value preview" Click="View_ValuePreview" IsThreeState="False" IsEnabled="True">
 					<Image Source="Resources/icons8/Toolbar.View.ValuePreview.png" />
-				</ToggleButton>
-				
-				<ToggleButton x:Name="View_DataBufferInfo_TB" ToolTip="Data buffer info" Click="View_DataBufferInfo" IsThreeState="False" IsEnabled="True">
-					<Image Source="Resources/Toolbar.View.DataBufferInfo.png" />
 				</ToggleButton>
 				
 			</ToolBar>

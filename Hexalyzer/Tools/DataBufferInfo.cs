@@ -31,7 +31,7 @@ namespace Hexalyzer.Tools
 				Height = double.NaN,
 				HorizontalAlignment = HorizontalAlignment.Stretch,
 				VerticalAlignment = VerticalAlignment.Stretch,
-				Margin = new Thickness(0, 0, 4, 0),
+				Margin = new Thickness(4, 0, 4, 0),
 				Text = "n/a",
 			};
 

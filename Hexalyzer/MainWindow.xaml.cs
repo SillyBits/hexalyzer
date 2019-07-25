@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 
 
@@ -19,6 +20,8 @@ namespace Hexalyzer
 
 		public MainWindow()
 		{
+			Loaded += _Loaded;
+
 			InitializeComponent();
 
 			_Init();
@@ -110,6 +113,35 @@ namespace Hexalyzer
 
 		// Non-public members following
 		//
+
+		private void _Loaded(object sender, EventArgs e)
+		{
+#if DEVENV
+			Action<string,string,string,RoutedEventHandler> create = (name,header,icon,handler) => {
+				BitmapImage img = new BitmapImage(new Uri("pack://application:,,,/Resources/" + icon));
+
+				MenuItem menu = new MenuItem() {
+					Name = name + "_Menu",
+					Header = header,
+					IsCheckable = true,
+					Icon = new Image() { Source = img },
+				};
+				menu.Click += handler;
+				View_Menu.Items.Add(menu);
+
+				ToggleButton button = new ToggleButton() {
+					Name = name + "_TB",
+					ToolTip = header,
+					IsThreeState = false,
+					Content = new Image() { Source = img },
+				};
+				button.Click += handler;
+				View_ToolBar.Items.Add(button);
+			};
+
+			create("View_DataBufferInfo", "Data buffer info", "Toolbar.View.DataBufferInfo.png", View_DataBufferInfo);
+#endif
+		}
 
 		protected override void OnClosing(CancelEventArgs e)
 		{
@@ -303,6 +335,7 @@ namespace Hexalyzer
 			}
 		}
 
+#if DEVENV
 		private void View_DataBufferInfo(object sender, RoutedEventArgs e)
 		{
 			if (_IsCheckedToggling)
@@ -311,15 +344,25 @@ namespace Hexalyzer
 			bool active;
 			if (sender is MenuItem)
 			{
-				_IsCheckedToggling = true;
-				View_DataBufferInfo_TB.IsChecked = active = (sender as MenuItem).IsChecked;
-				_IsCheckedToggling = false;
+				active = (sender as MenuItem).IsChecked;
+				ToggleButton btn = View_ToolBar.Items.Named("View_DataBufferInfo_TB") as ToggleButton;
+				if (btn != null)
+				{
+					_IsCheckedToggling = true;
+					btn.IsChecked = active;
+					_IsCheckedToggling = false;
+				}
 			}
 			else if (sender is ToggleButton)
 			{
-				_IsCheckedToggling = true;
-				View_DataBufferInfo_Menu.IsChecked = active = (sender as ToggleButton).IsChecked.GetValueOrDefault(false);
-				_IsCheckedToggling = false;
+				active = (sender as ToggleButton).IsChecked.GetValueOrDefault(false);
+				MenuItem menu = View_Menu.Items.Named("View_DataBufferInfo_Menu") as MenuItem;
+				if (menu != null)
+				{
+					_IsCheckedToggling = true;
+					menu.IsChecked = active;
+					_IsCheckedToggling = false;
+				}
 			}
 			else
 				return;

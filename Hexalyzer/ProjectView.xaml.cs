@@ -5,15 +5,13 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
+
+using Hexalyzer.Datatypes;
 
 
 /*
@@ -25,25 +23,36 @@ using System.Windows.Media.Animation;
 
 namespace Hexalyzer
 {
+
 	/// <summary>
 	/// Interaction logic for ProjectView.xaml
 	/// </summary>
 	public partial class ProjectView : UserControl
 	{
 
-		//TODO: Remove DependencyProperty and trigger rendering and such different
-		public static readonly DependencyProperty ProjectProperty =
-			DependencyProperty.Register("Project", typeof(ProjectFile), typeof(ProjectView));
 		public ProjectFile Project
 		{
-			get
-			{
-				return _Project;
-			}
+			get { return _Project; }
 			set
 			{
+				bool changed = (_Project != value);
+
 				_Project = value;
-				SetValue(ProjectProperty, value);
+
+				if (changed)
+				{
+					_StopAnalyzer();
+
+					if (_Project == null && _IsCaretVisible != null)
+						_HideCaret();
+
+					_ClearSelection();
+
+					_Manager.Update(_Project != null ? Project.Nodes : null);
+
+					// Trigger re-rendering
+					Offset = 0;
+				}
 			}
 		}
 
@@ -51,20 +60,26 @@ namespace Hexalyzer
 		public event OffsetChangedHandler OffsetChanged;
 		public long Offset
 		{
-			get
-			{
-				return _Offset;
-			}
+			get { return _Offset; }
 			set
 			{
+				if (_IsAnalyzerActive)
+					_StopAnalyzer();
+
+				if (_Project == null)
+					return;
+
 				_Offset = value;
+
 				long from = -1, to = -1;
 				if (_Offset >= 0)
 				{
-					scroller.Value = ((double)_Offset) / Settings.BYTES_PER_ROW;
+					_Manager.MoveToOffset(_Offset);
+
 					_Render();
+
 					from = _Offset;
-					to   = _RowInfos.PostOffset - 1;
+					to   = _Manager.LastVisibleRow.Offset + _Manager.LastVisibleRow.Length - 1;
 
 					// Let analyzer know offset was changed
 					if (_IsAnalyzerActive)
@@ -97,7 +112,7 @@ namespace Hexalyzer
 						{
 							long swap = from;
 							from = to;
-							to = swap;
+							to   = swap;
 						}
 					}
 					else if (_MouseLeftPos != null)
@@ -133,9 +148,16 @@ namespace Hexalyzer
 			{
 				_IsAnalyzerActive = value;
 				if (_IsAnalyzerActive)
-					_StartAnalyzer();
+				{
+					//_StartAnalyzer();
+					//=> Redrawing will trigger analyzer
+					Offset = _Offset;
+				}
 				else
+				{
 					_StopAnalyzer();
+					_BackingStoreAnalyzer.Children.Clear();
+				}
 			}
 		}
 
@@ -144,12 +166,6 @@ namespace Hexalyzer
 		{
 			_Project = null;
 			_Offset = 0;
-
-			_RowInfos = new RowInfoCache();
-
-			_UpdateRendererCache(VisualTreeHelper.GetDpi(this));
-
-			_InitAnalyzerThread();
 
 			Initialized += _Initialized;
 			Loaded += _Loaded;
@@ -206,7 +222,6 @@ namespace Hexalyzer
 			if (source == null)
 				return;
 
-			//long offset = _RowInfos.Offset(_MouseLeftPos.Row) + _MouseLeftPos.Col;
 			long offset = _CharsToOffset(_MouseLeftPos);
 
 			long split_at = offset - source.Offset;
@@ -246,16 +261,19 @@ namespace Hexalyzer
 				}
 
 				// Scroll upwards in case we went beyond bottom row
-				if (_MouseLeftPos.Row >= _MaxRows)
+				if (_MouseLeftPos.Row >= _Manager.VisibleRows)
 				{
-					long adjust = _RowInfos.CountNonUniqueOffsets(_Offset);
-					_Offset += (_MouseLeftPos.Row - _MaxRows + 1) * Settings.BYTES_PER_ROW;
-					_MouseLeftPos.Row = _MaxRows - 1 - adjust;
+					//TODO: Move whole node into view?
+					_Offset = _Manager.MoveBy(+1);
+					_MouseLeftPos.Row = _Manager.VisibleRows - 1;
 				}
 
 				_CaretPos = _CharsToPixels(_MouseLeftPos, _MouseLeftScope);
 				_ShowCaret();
 			}
+
+			// Adjust managed cache
+			_Manager.Add(source, added);
 
 			// Trigger redraw
 			Offset = _Offset;
@@ -277,36 +295,14 @@ namespace Hexalyzer
 
 			_HideCaret();
 
+			// Adjust managed cache
+			_Manager.Remove(removed, replacement);
+
 			// Trigger redraw
 			Offset = _Offset;
 		}
 
 
-		//TODO: Migrate code in here into a new _UpdateSomething() method which is also triggered from Project property
-		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
-		{
-			base.OnPropertyChanged(e);
-
-			if (e.Property == ProjectProperty)
-			{
-				_StopAnalyzer();
-
-				if (_Project == null && _IsCaretVisible != null)
-					_HideCaret();
-
-				_TotalRows = (_Project != null) ? _Project.Filesize / Settings.BYTES_PER_ROW : 0;
-				scroller.IsEnabled = (_Project != null);
-				_SelectionStart = null;
-
-				//_Render();
-				Offset = 0;
-
-				//// Re-start analyzer
-				//if (_Project != null && _IsAnalyzerActive)
-				//	_StartAnalyzer();
-				//=> Done in _Render() already
-			}
-		}
 
 		protected override void OnDpiChanged(DpiScale oldDpiScaleInfo, DpiScale newDpiScaleInfo)
 		{
@@ -314,15 +310,15 @@ namespace Hexalyzer
 
 			// Renew caches
 			RenderHelper.UpdateCache(newDpiScaleInfo);
-			_MaxRows = 0;
+
+			_Manager.VisibleRows = (long)((ActualHeight - RenderHelper.HeaderHeight) / RenderHelper.RowHeight);
 		}
 
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
 			if (sizeInfo.HeightChanged)
 			{
-				// Renew caches
-				_MaxRows = 0;
+				_Manager.VisibleRows = (long)((sizeInfo.NewSize.Height - RenderHelper.HeaderHeight) / RenderHelper.RowHeight);
 			}
 
 			//_Render(); => base will trigger this
@@ -346,22 +342,15 @@ namespace Hexalyzer
 		protected override void OnMouseWheel(MouseWheelEventArgs e)
 		{
 			e.Handled = true;
-			//base.OnMouseWheel(e);
 
 			if (_Project == null)
 				return;
 
 			// Received a 120 for a single move
-			// Make sure this always the case
-			long lines = -e.Delta / 20; 
+			// Make sure this is always the case
+			long lines = -e.Delta / 20;
 
-			long offset = _Offset + (lines * Settings.BYTES_PER_ROW);
-			if (offset < 0)
-				offset = 0;
-			else if (offset > ((_TotalRows + _RowAdjust - _MaxRows + 1) * Settings.BYTES_PER_ROW))
-				offset = (_TotalRows + _RowAdjust - _MaxRows + 1) * Settings.BYTES_PER_ROW;
-
-			Offset = offset;
+			Offset = _Manager.MoveBy(lines);
 		}
 
 		protected override void OnMouseLeave(MouseEventArgs e)
@@ -378,7 +367,10 @@ namespace Hexalyzer
 			base.OnMouseMove(e);
 
 			if (_Project == null)
+			{
+				_HideRowFeedback();
 				return;
+			}
 
 			Point pos = e.GetPosition(this);
 
@@ -392,7 +384,6 @@ namespace Hexalyzer
 
 				_UpdateColumns();
 				_Render();
-				_UpdateRemarkTextbox();
 			}
 			else if (e.LeftButton == MouseButtonState.Pressed)
 			{
@@ -505,7 +496,7 @@ namespace Hexalyzer
 					if (target == Scope.Hex || target == Scope.Ascii)
 					{
 						// Adjust column if needed
-						var info = _RowInfos[_MouseLeftPos.Row];
+						var info = _Manager[_Manager.FirstVisibleIndex + _MouseLeftPos.Row];
 						long start = info.StartCol;
 						if (start > _MouseLeftPos.Col)
 						{
@@ -550,7 +541,7 @@ namespace Hexalyzer
 				return;
 
 			bool shift = e.KeyboardDevice.Modifiers == ModifierKeys.Shift;
-			bool ctrl = e.KeyboardDevice.Modifiers == ModifierKeys.Control;
+			bool ctrl  = e.KeyboardDevice.Modifiers == ModifierKeys.Control;
 
 			if (shift)
 			{
@@ -569,118 +560,113 @@ namespace Hexalyzer
 			switch (e.Key)
 			{
 				case Key.Up:
-					if (row > 0)
-						row--;
-					else if (ofs > 0)
-						ofs = _RowInfos.PrevOffset;
+					row--;
 					break;
 
 				case Key.Down:
-					if (row < (_MaxRows - 1))
-						row++;
-					else if (((_Offset / Settings.BYTES_PER_ROW) + row) < _TotalRows)
-						ofs = _RowInfos.Offset(1);
+					row++;
 					break;
 
 				case Key.Left:
-					if (col > 0)
-						col--;
-					else if (row > 0)
-					{
-						row--;
-						if (_MouseLeftScope != Scope.Remark)
-							col = Settings.BYTES_PER_ROW - 1;
-					}
+					col--;
 					break;
 
 				case Key.Right:
-					if (_MouseLeftScope == Scope.Remark || col < (Settings.BYTES_PER_ROW - 1))
-						col++;
-					else if (((_Offset / Settings.BYTES_PER_ROW) + row) < _TotalRows)
-					{
-						row++;
-						col = 0;
-					}
+					col++;
 					break;
 
 				case Key.Home:
 					col = 0;
 					if (ctrl)
+					{
 						row = ofs = 0;
+						_Manager.FirstVisibleIndex = 0;
+					}
 					break;
 
 				case Key.End:
-					if (_MouseLeftScope != Scope.Remark)
-						col = Settings.BYTES_PER_ROW - 1;
+					col = Settings.BYTES_PER_ROW - 1;
 					if (ctrl)
 					{
-						row = _MaxRows - 1;
-						ofs = (_TotalRows + _RowAdjust - _MaxRows + 1) * Settings.BYTES_PER_ROW;
+						row = _Manager.VisibleRows - 1;
+						ofs = _Manager.MoveBy(int.MaxValue);
 					}
 					break;
 
 				case Key.PageUp:
-					// Can only be guessed as there is no cached info to rely on
-					ofs -= _MaxRows * Settings.BYTES_PER_ROW;
-					if (ofs < 0)
-						ofs = 0;
+					ofs = _Manager.MoveBy(-_Manager.VisibleRows);
 					break;
 
 				case Key.PageDown:
-					//ofs += _MaxRows * Settings.BYTES_PER_ROW;
-					ofs = _RowInfos.PostOffset;
-					if (ofs > ((_TotalRows + _RowAdjust - _MaxRows + 1) * Settings.BYTES_PER_ROW))
-						ofs = (_TotalRows + _RowAdjust - _MaxRows + 1) * Settings.BYTES_PER_ROW;
+					ofs = _Manager.MoveBy(+_Manager.VisibleRows);
 					break;
 
 				default:
 					return;
 			}
 
-			// Scroll to different offset if required
-			// (this must be done in advance for adjustment code following)
+			// Adjust row if needed
+			bool adjust_col = false;
+			if (row != _MouseLeftPos.Row)
+			{
+				if (row < 0)
+				{
+					ofs = _Manager.MoveBy(row);
+					row = 0;
+				}
+				else if (row > _Manager.VisibleRows - 1)
+				{
+					ofs = _Manager.MoveBy(row - (_Manager.VisibleRows - 1));
+					row = _Manager.VisibleRows - 1;
+				}
+
+				adjust_col = true;
+			}
+
+			// Save offset in case it has changed
 			if (ofs != _Offset)
 			{
 				Offset = ofs;
+
+				adjust_col = true;
+			}
+
+			// Adjust column if needed
+			if (col != _MouseLeftPos.Col || adjust_col)
+			{
+				var info = _Manager[_Manager.FirstVisibleIndex + row];
+
+				long start = info.StartCol;
+				if (start > col)
+				{
+					//TODO: Should head to end of previous row
+					if (row > 0 && e.Key == Key.Left)
+					{
+						row--;
+						col = _Manager[_Manager.FirstVisibleIndex + row].EndCol;
+					}
+					else
+						col = start;
+				}
+				else
+				{
+					long end = info.EndCol;
+					if (end < col)
+					{
+						//TODO: Should head to start of next row
+						if (row < _Manager.VisibleRows - 1 && e.Key == Key.Right)
+						{
+							row++;
+							col = _Manager[_Manager.FirstVisibleIndex + row].StartCol;
+						}
+						else
+							col = end;
+					}
+				}
 			}
 
 			if (row != _MouseLeftPos.Row || col != _MouseLeftPos.Col)
 			{ 
-				// Adjust column if needed
-				if (_MouseLeftScope != Scope.Remark)
-				{
-					var info = _RowInfos[row];
-					long start = info.StartCol;
-					if (start > col)
-					{
-						//TODO: Should head to end of previous row
-						if (row > 0 && e.Key == Key.Left)
-						{
-							row--;
-							info = _RowInfos[row];
-							col = info.EndCol;
-						}
-						else
-							col = start;
-					}
-					else
-					{
-						long end = info.EndCol;
-						if (end < col)
-						{
-							//TODO: Should head to start of next row
-							if (row < _MaxRows - 1 && e.Key == Key.Right)
-							{
-								row++;
-								info = _RowInfos[row];
-								col = info.StartCol;
-							}
-							else
-								col = end;
-						}
-					}
-				}
-
 				// Adjust pos and re-start caret timer
 				_MouseLeftPos.Row = row;
 				_MouseLeftPos.Col = col;
@@ -689,9 +675,7 @@ namespace Hexalyzer
 			}
 
 			if (shift)
-			{
 				_ShowSelection();
-			}
 		}
 
 		protected override void OnKeyUp(KeyEventArgs e)
@@ -700,7 +684,8 @@ namespace Hexalyzer
 			{
 				if (e.KeyboardDevice.Modifiers != ModifierKeys.Control)
 				{
-					Debug.WriteLine("KeyUp: Keycode={0}", e.Key);
+					//Debug.WriteLine("KeyUp: Keycode={0}", e.Key);
+
 					bool shift = (e.KeyboardDevice.Modifiers == ModifierKeys.Shift);
 					bool handled = true;
 					switch (e.Key)
@@ -708,9 +693,9 @@ namespace Hexalyzer
 						case Key.OemPlus:
 						case Key.Add: AddResource(null); break;
 
-						case Key.S: AddResource(typeof(Datatypes.VarString)); break;
-						case Key.A: AddResource(typeof(Datatypes.AsciiString)); break;
-						case Key.U: AddResource(typeof(Datatypes.WideString)); break;
+						case Key.S: AddResource(typeof(VarString)); break;
+						case Key.A: AddResource(typeof(AsciiString)); break;
+						case Key.U: AddResource(typeof(WideString)); break;
 
 						case Key.D1: AddResource(shift ? typeof(byte)   : typeof(sbyte)); break;
 						case Key.D2: AddResource(shift ? typeof(ushort) : typeof(short)); break;
@@ -739,6 +724,25 @@ namespace Hexalyzer
 
 		private void _Initialized(object sender, EventArgs e)
 		{
+			_UpdateRendererCache(VisualTreeHelper.GetDpi(this));
+
+			if (_Columns == null)
+			{
+				_Columns = new TextColumn[] {
+					new TextColumn(Scope.Offset, "Offset" , new Helper.OffsetFormatter(), HorizontalAlignment.Center),
+					new TextColumn(Scope.Hex   , null     , new Helper.HexFormatter()),
+					new TextColumn(Scope.Ascii , null     , new Helper.AsciiFormatter()),
+					new TextColumn(Scope.Value , "Value"  , new Helper.ValueFormatter(), HorizontalAlignment.Left, 100),
+					new TextColumn(Scope.Remark, "Remarks", new Helper.RemarkFormatter(), HorizontalAlignment.Left, 0, true),
+				};
+			}
+			_UpdateColumns();
+
+			_Manager = new RowManager(scroller);
+			//_Manager.VisibleRows = (long)((ActualHeight - RenderHelper.HeaderHeight) / RenderHelper.RowHeight);
+			//=> Will be set when OnRenderSizeChanged is being triggered
+
+			_InitAnalyzerThread();
 		}
 
 		private void _Loaded(object sender, EventArgs e)
@@ -749,7 +753,7 @@ namespace Hexalyzer
 		{
 			Debug.WriteLine("Scroll: " + e.NewValue);
 
-			Offset = (long)(Math.Ceiling(e.NewValue) * Settings.BYTES_PER_ROW);
+			Offset = _Manager.MoveBy((long)e.NewValue);
 		}
 
 		/// <summary>
@@ -772,101 +776,48 @@ namespace Hexalyzer
 			if (_Offset < 0)
 				_Offset = 0;
 
-			Point pt = new Point(Margin.Left, Margin.Top);
+			_RenderHeaderRow(dc);
 
-			_RenderHeaderRow(dc);//, pt);
-			pt.Y += RenderHelper.HeaderHeight;
-			pt.X = Margin.Left;
+			Point pt = new Point(Margin.Left, Margin.Top + RenderHelper.HeaderHeight);
+			Point pt0 = new Point(Margin.Left, 0);
+			Point pt1 = new Point(ActualWidth - Margin.Right, 0);
 
-			// Re-new caches if instructed to do so
-			if (_MaxRows == 0)
+			long row_index = _Manager.FirstVisibleIndex;
+			while (row_index <= _Manager.LastVisibleIndex)
 			{
-				_MaxRows = (int)((ActualHeight - RenderHelper.HeaderHeight) / RenderHelper.RowHeight);
-				_RowInfos.Resize(_MaxRows);
-			}
+				RowManager.Row row = _Manager[row_index];
+				pt.Y = _RenderRow(dc, pt.Y, row);
 
-			ProjectNode node = Project.FindNodeByOffset(Offset);
-			ProjectNode prev;
-			long remain = node.Length;
-			if (node.Offset < _Offset)
-			{
-				// Compensate for starting somewhere in the middle of node
-				remain -= _Offset - node.Offset;
-				prev = node;
-			}
-			else
-				prev = Project.FindPrevNode(node);
-
-			if (prev != null && prev.Length < Settings.BYTES_PER_ROW)
-				_RowInfos.SetPrev(prev.Offset, prev.Length);
-			else
-				_RowInfos.SetPrev(_Offset - Settings.BYTES_PER_ROW);
-
-			long bytes_written;
-			long row_index = 0;
-			long offset = _Offset;
-			Point pt1 = new Point(ActualWidth, 0);
-			while (pt.Y < (ActualHeight - RenderHelper.HeaderHeight))
-			{
-				if (node == null)
-					break;
-
-				pt.Y += _RenderRow(dc, pt, offset, node);
-
-				bytes_written = Settings.BYTES_PER_ROW - (offset % Settings.BYTES_PER_ROW);
-				if (remain - bytes_written <= 0)
+				if (row.Last)
 				{
-					_RowInfos.Set(row_index, offset, remain);
-					node = Project.FindNodeByOffset(node.Offset + node.Length);
-					if (node != null)
-					{
-						offset = node.Offset;
-						remain = node.Length;
-					}
-
 					// Node separator
-					pt.Y -= 0.5;
-					pt1.Y = pt.Y;
-					dc.DrawLine(RenderHelper.FramePen, pt, pt1);
-					pt.Y += 0.5;
-				}
-				else
-				{
-					_RowInfos.Set(row_index, offset, bytes_written);
-					offset += bytes_written;
-					remain -= bytes_written;
+					pt0.Y = pt1.Y = pt.Y - 0.5;
+					dc.DrawLine(RenderHelper.FramePen, pt0, pt1);
 				}
 
 				row_index++;
 			}
 
-			if (offset + Settings.BYTES_PER_ROW >= _Project.Filesize)
-				_RowInfos.SetPost(_Project.Filesize, 0);
-			else
-				_RowInfos.SetPost(offset, (remain < Settings.BYTES_PER_ROW) ? remain : Settings.BYTES_PER_ROW);
 
-			_RowAdjust = _RowInfos.CountNonUniqueOffsets();
-			scroller.Maximum = _TotalRows + _RowAdjust - _MaxRows + 1;
-			//scroller.ViewportSize = _TotalRows + _RowAdjust;
-			scroller.ViewportSize = _MaxRows;
 
 			// Let analyzer know some aspect may have changed
 			if (_IsAnalyzerActive)
 				_StartAnalyzer();
 		}
 
-		private void _RenderHeaderRow(DrawingContext dc)//, Point pt)
+		private void _RenderHeaderRow(DrawingContext dc)
 		{
 			Point margin = new Point(Margin.Left, Margin.Top);
-			Size dims = new Size(ActualWidth, ActualHeight);
+			Size dims = new Size(ActualWidth - Margin.Left - Margin.Right, 
+								 ActualHeight - Margin.Top - Margin.Bottom);
 
 			foreach (TextColumn column in _Columns)
 				RenderHelper.RenderHeaderCell(dc, column, margin, dims);
 		}
 
-		private double _RenderRow(DrawingContext dc, Point margin, long offset, ProjectNode node)
+		private double _RenderRow(DrawingContext dc, double y, RowManager.Row row)
 		{
-			Rect rect = new Rect(margin.X, margin.Y, 0, RenderHelper.RowHeight);
+			Rect rect = new Rect(Margin.Left, y, 0, RenderHelper.RowHeight);
 			double w;
 
 			foreach (TextColumn column in _Columns)
@@ -874,18 +825,18 @@ namespace Hexalyzer
 				rect.X += TextColumn.Margin;
 
 				// Protect against underflows with stretchable column moved out of view
-				w = column.Stretch ? ActualWidth - TextColumn.Margin - rect.X : column.ContentWidth;
+				w = column.Stretch ? ActualWidth - Margin.Right - TextColumn.Margin - rect.X : column.ContentWidth;
 				if (w < 0)
 					break;
 				rect.Width = w;
 
-				RenderHelper.RenderText(dc, column.Formatter.Format(offset, node), rect, 
+				RenderHelper.RenderText(dc, column.Formatter.Format(row.Offset, row.Node), rect, 
 					HorizontalAlignment.Left, VerticalAlignment.Center, rect.Width, rect.Height);
 
 				rect.X += rect.Width + TextColumn.Margin;
 			}
 
-			return RenderHelper.RowHeight;
+			return y + RenderHelper.RowHeight;
 		}
 
 
@@ -1079,19 +1030,19 @@ namespace Hexalyzer
 			if (column == null)
 				return;
 
-			long offset = _RowInfos.Offset(_MouseLeftPos.Row);
+			long offset = _Manager.Offset(_MouseLeftPos.Row);
 			ProjectNode node = _Project.FindNodeByOffset(offset);
 			if (node == null)
 				return;
 
-			long row = _RowInfos.FindRowByOffset(node.Offset);
+			long row = _Manager.FindRowByOffset(node.Offset);
 			if (row < 0)
 				return;
 
 			_RemarkTextBox = new TextBox() {
-				Width = ActualWidth - column.Left - (2 * TextColumn.Margin),//column.ContentWidth,
+				Width = ActualWidth - column.Left - (2 * TextColumn.Margin),
 				Height = RenderHelper.RowHeight + 3,
-				Background = Brushes.Snow,//GhostWhite,
+				Background = Brushes.Snow,
 				HorizontalAlignment = HorizontalAlignment.Left,
 				VerticalAlignment = VerticalAlignment.Top,
 				Margin = new Thickness(column.Left + TextColumn.Margin, RenderHelper.HeaderHeight + (row * RenderHelper.RowHeight) - 2, 0, 0),
@@ -1140,7 +1091,7 @@ namespace Hexalyzer
 			if (node == null)
 				return;
 
-			long row = _RowInfos.FindRowByOffset(node.Offset);
+			long row = _Manager.FindRowByOffset(node.Offset);
 			if (row < 0)
 				return;
 
@@ -1176,6 +1127,7 @@ namespace Hexalyzer
 			_AnalyzerThreadStopped = false;
 
 			//_AnalyzerThread.Start();
+			//=> Delayed until first use
 		}
 
 		private void _ShutdownAnalyzerThread()
@@ -1190,6 +1142,8 @@ namespace Hexalyzer
 
 			if (_AnalyzerThread.IsAlive)
 			{
+				Debug.WriteLine("Stopping Analyzer thread");
+
 				_AnalyzerThreadStopped = true;
 				//if (force)
 				//	_AnalyzerThread.Abort();
@@ -1200,6 +1154,8 @@ namespace Hexalyzer
 				//while (_AnalyzerThread.ThreadState == System.Threading.ThreadState.Running)
 				while (_AnalyzerThread.IsAlive)
 					Thread.Yield();
+
+				Debug.WriteLine("Analyzer thread stopped");
 			}
 
 			_AnalyzerThread = null;
@@ -1238,23 +1194,25 @@ namespace Hexalyzer
 		{
 			Debug.WriteLine("!! Started");
 
-			List<Analyzers.Finding> findings = new List<Analyzers.Finding>();
+			long first_vis = -1;
+
+			List<Drawing> findings = new List<Drawing>();
 			Analyzers.Finding finding = null;
 
 			TextColumn hex = _GetColumnForTarget(Scope.Hex);
 			TextColumn ascii = _GetColumnForTarget(Scope.Ascii);
-			Action<DrawingContext, Analyzers.Finding, Brush> inject = (dc, find, brush) => {
+			Action<Analyzers.Finding, Brush> inject = (find, brush) => {
 				long ofs = find.NodeOffset + find.DataOffset;
 
-				long row = _RowInfos.FindRowByOffset(ofs);
+				long row = _Manager.FindRowByOffset(ofs, false) - first_vis;
 				long col = ofs % Settings.BYTES_PER_ROW;
 				Position start = new Position((int)row, (int)col);
 
-				row = _RowInfos.FindRowByOffset(ofs + find.DataLength - 1);
+				row = _Manager.FindRowByOffset(ofs + find.DataLength - 1, false) - first_vis;
 				col = (ofs + find.DataLength - 1) % Settings.BYTES_PER_ROW;
 				Position end = new Position((int)row, (int)col);
 
-				Debug.WriteLine("!! Finding {0}, ofs:{1:X8}+{2:X8}, len:{3} -> {4} - {5}", 
+				Debug.WriteLine("!! Finding {0}, ofs:{1:X8}+{2:X8}, len:{3} -> {4} - {5}",
 					find.Type, find.NodeOffset, find.DataOffset, find.DataLength, start, end);
 
 				Point hex_pt1 = hex.CharsToPixels(start);
@@ -1267,8 +1225,8 @@ namespace Hexalyzer
 
 				if (start.Row == end.Row)
 				{
-					dc.DrawDrawing(ShapeProvider.CreateRect(hex_pt1, hex_pt2, brush));
-					dc.DrawDrawing(ShapeProvider.CreateRect(ascii_pt1, ascii_pt2, brush));
+					findings.Add(ShapeProvider.CreateRect(hex_pt1, hex_pt2, brush));
+					findings.Add(ShapeProvider.CreateRect(ascii_pt1, ascii_pt2, brush));
 				}
 				else
 				{
@@ -1278,8 +1236,8 @@ namespace Hexalyzer
 						return ShapeProvider.CreatePoly(a, b, min_x, max_x, brush);
 					};
 
-					dc.DrawDrawing(create(hex, hex_pt1, hex_pt2));
-					dc.DrawDrawing(create(ascii, ascii_pt1, ascii_pt2));
+					findings.Add(create(hex, hex_pt1, hex_pt2));
+					findings.Add(create(ascii, ascii_pt1, ascii_pt2));
 				}
 			};
 
@@ -1294,14 +1252,15 @@ namespace Hexalyzer
 
 				if (_AnalyzerThreadStopped)
 					break;
-
 				if (_Project == null)
 					continue;// Cease work for now
-				ProjectNode node = _Project.FindNodeByOffset(_RowInfos.Offset(0));
+
+				ProjectNode node = _Manager.FirstVisibleRow.Node;
 				if (node == null)
 					continue;// Cease work for now
-				long start_offset = node.Offset;
-				long end_offset = _RowInfos.PostOffset;
+				first_vis = _Manager.FirstVisibleIndex;
+				long start_offset = _Manager.FirstVisibleRow.Offset;
+				long end_offset = _Manager.LastVisibleRow.Offset + _Manager.LastVisibleRow.Length - 1;
 				IReadOnlyList<byte> data = node.Data;
 
 				findings.Clear();
@@ -1333,9 +1292,8 @@ namespace Hexalyzer
 					if (finding != null)
 					{
 						finding.NodeOffset = node.Offset;
-						findings.Add(finding);
+						inject(finding, Brushes.Azure);
 					}
-
 					if (_AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 						break;
 
@@ -1344,9 +1302,8 @@ namespace Hexalyzer
 					if (finding != null)
 					{
 						finding.NodeOffset = node.Offset;
-						findings.Add(finding);
+						inject(finding, Brushes.Beige);
 					}
-
 					if (_AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 						break;
 
@@ -1362,15 +1319,11 @@ namespace Hexalyzer
 				{
 					Dispatcher.Invoke(() => {
 						DrawingContext dc = _BackingStoreAnalyzer.Open();
-						foreach (Analyzers.Finding f in findings)
+						foreach (Drawing d in findings)
 						{
 							if (_AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 								break;
-
-							if (f.Type == typeof(uint) || f.Type == typeof(ulong))
-								inject(dc, f, Brushes.Azure);
-							else if (f.Type == typeof(Datatypes.VarString))
-								inject(dc, f, Brushes.Beige);
+							dc.DrawDrawing(d);
 						}
 						dc.Close();
 					});
@@ -1378,7 +1331,7 @@ namespace Hexalyzer
 
 				if (_AnalyzerCancelWork.WaitOne(0))
 				{
-					Dispatcher.Invoke(() => _BackingStoreAnalyzer.Children.Clear());
+					//Dispatcher.Invoke(() => _BackingStoreAnalyzer.Children.Clear());
 					_AnalyzerCancelWork.Reset();
 				}
 			}
@@ -1390,9 +1343,7 @@ namespace Hexalyzer
 
 		private long _CharsToOffset(Position chars, bool as_start = true)
 		{
-			long offset = _RowInfos.Offset(chars.Row);
-			offset -= offset % Settings.BYTES_PER_ROW;
-			offset += chars.Col;
+			long offset = (_Manager.Offset(chars.Row) & Settings.OFFSET_MASK) + chars.Col;
 			if (!as_start)
 				offset--;
 			return offset;
@@ -1449,21 +1400,10 @@ namespace Hexalyzer
 
 		private void _UpdateRendererCache(DpiScale dpiscale)
 		{
-			//CharSizesCache.IsDirty = true;
 			RenderHelper.UpdateCache(dpiscale);
 
-			if (_Columns == null)
-			{
-				_Columns = new TextColumn[] {
-					new TextColumn(Scope.Offset, "Offset" , new Helper.OffsetFormatter(), HorizontalAlignment.Center),
-					new TextColumn(Scope.Hex   , null     , new Helper.HexFormatter()),
-					new TextColumn(Scope.Ascii , null     , new Helper.AsciiFormatter()),
-					new TextColumn(Scope.Value , "Value"  , new Helper.ValueFormatter(), HorizontalAlignment.Left, 100),
-					new TextColumn(Scope.Remark, "Remarks", new Helper.RemarkFormatter(), HorizontalAlignment.Left, 0, true),
-				};
-			}
-
-			_UpdateColumns();
+			//if (_Manager != null && ActualHeight > 0)
+			//	_Manager.VisibleRows = (long)((ActualHeight - RenderHelper.HeaderHeight) / RenderHelper.RowHeight);
 		}
 
 		private void _UpdateColumns()
@@ -1479,13 +1419,9 @@ namespace Hexalyzer
 
 		private ProjectFile _Project;
 		private long _Offset;
-		//private ProjectNode _SelectedNode;
+		private RowManager _Manager;
 
 		private DrawingGroup _BackingStoreContent = new DrawingGroup();
-		private int _MaxRows;
-		private long _TotalRows;
-		private RowInfoCache _RowInfos;
-		private long _RowAdjust;
 
 		private Position _MouseLeftPos;
 		private Scope _MouseLeftScope;
@@ -1610,105 +1546,305 @@ namespace Hexalyzer
 	}
 
 
-	internal class RowInfoCache
+	/// <summary>
+	/// Row manager will not only deal with navigation (which includes taking
+	/// full control on scroll bar), but will also be used for rendering with
+	/// feeding all info required to render a row of data.
+	/// </summary>
+	internal class RowManager
 	{
-		internal Info this[long row] { get { return _Offsets[row + 1]; } }
-		internal long Offset(long row) { return _Offsets[row + 1].Offset; }
-		internal long Length(long row) { return _Offsets[row + 1].Length; }
-		internal void Set(long row, long offset, long length = 0)
+		internal long TotalRows
 		{
-			_Offsets[row + 1].Offset = offset;
-			_Offsets[row + 1].Length = (length > 0) ? length : Settings.BYTES_PER_ROW;
-		}
-
-		internal long PrevOffset { get { return _Offsets[0].Offset; } }
-		internal long PrevLength { get { return _Offsets[0].Length; } }
-		internal void SetPrev(long offset, long length = 0)
-		{
-			_Offsets[0].Offset = offset;
-			_Offsets[0].Length = (length > 0) ? length : Settings.BYTES_PER_ROW;
-		}
-
-		internal long PostOffset { get { return _Offsets[_Last].Offset; } }
-		internal long PostLength { get { return _Offsets[_Last].Length; } }
-		internal void SetPost(long offset, long length = 0)
-		{
-			_Offsets[_Last].Offset = offset;
-			_Offsets[_Last].Length = (length > 0) ? length : Settings.BYTES_PER_ROW;
-		}
-
-		internal void Resize(int rows)
-		{
-			// Save on re-allocs
-			if (_Offsets != null && _Offsets.Length == rows + 2)
-				return;
-			long max = rows + 2;
-			_Offsets = new Info[max];
-			_Last = max - 1;
-		}
-
-		internal long CountNonUniqueOffsets(long max_offset = -1)
-		{
-			long count = 0;
-
-			if (_Offsets != null)
+			get
 			{
-				long last_offset = _Offsets[1].Offset; // Skip 'Prev'
-				for (long index = 2; index < _Last; ++index)
-				{
-					long offset = _Offsets[index].Offset;
-					if (max_offset != -1 && max_offset <= offset)
-						break;
+				return (_Rows != null) ? _Rows.Count : 0;
+			}
+		}
 
-					if (last_offset == offset)
-						count++;
-					else
-						last_offset = offset;
+		internal long VisibleRows
+		{
+			get { return _VisibleRows; }
+			set
+			{
+				_VisibleRows = value;
+
+				_Scrollbar.Maximum = TotalRows - VisibleRows;
+				_Scrollbar.ViewportSize = VisibleRows;
+
+				FirstVisibleIndex = TotalRows - _VisibleRows;
+			}
+		}
+
+		internal long FirstVisibleIndex
+		{
+			get { return _FirstVisible; }
+			set
+			{
+				_FirstVisible = value;
+				if (_FirstVisible < 0)
+					_FirstVisible = 0;
+				else if (_FirstVisible > TotalRows - VisibleRows)
+					_FirstVisible = TotalRows - VisibleRows;
+
+				_Scrollbar.Value = _FirstVisible;
+			}
+		}
+
+		internal Row FirstVisibleRow
+		{
+			get
+			{
+				if (_FirstVisible < 0 || _FirstVisible >= TotalRows)
+					return null;
+				return this[_FirstVisible];
+			}
+		}
+
+		internal long LastVisibleIndex
+		{
+			get
+			{
+				if (_FirstVisible < 0)
+					return -1;
+				long last = _FirstVisible + VisibleRows - 1;
+				if (last >= TotalRows)
+					last = TotalRows - 1;
+				return last;
+			}
+		}
+
+		internal Row LastVisibleRow
+		{
+			get
+			{
+				long last = LastVisibleIndex;
+				if (last < 0)
+					return null;
+				return this[last];
+			}
+		}
+
+		internal Row this[long row]
+		{
+			get
+			{
+				if (row < 0 || row >= TotalRows)
+					return null;
+				return _Rows[(int)row];
+			}
+		}
+
+		internal long Offset(long row)
+		{
+			Row r = this[_FirstVisible + row];
+			return (r != null) ? r.Offset : -1;
+		}
+
+
+		internal RowManager(ScrollBar scrollbar)
+		{
+			_Scrollbar = scrollbar;
+		}
+
+
+		internal void Update(ProjectNodes nodes)
+		{
+			_Rows = new List<Row>();
+			_FirstVisible = -1;
+
+			if (nodes == null)
+			{
+				_Scrollbar.IsEnabled = false;
+				_Scrollbar.Maximum = -1;
+				return;
+			}
+
+			long offset, remain, column, length;
+			foreach (ProjectNode node in nodes)
+			{
+				offset = node.Offset;
+				remain = node.Length;
+				column = offset % Settings.BYTES_PER_ROW;
+				length = Settings.BYTES_PER_ROW - column;
+
+				while (remain > 0)
+				{
+					if (length > remain)
+						length = remain;
+
+					_Rows.Add(new Row(node, offset, length, (length == remain)));
+
+					offset += length;
+					remain -= length;
+					column = 0;
+					length = Settings.BYTES_PER_ROW;
 				}
 			}
 
-			return count;
+			_FirstVisible = 0;
+
+			_Scrollbar.Maximum = TotalRows - VisibleRows;
+			_Scrollbar.ViewportSize = VisibleRows;
+			_Scrollbar.IsEnabled = true;
 		}
+
+		internal void Add(ProjectNode removed, ProjectNode[] added)
+		{
+			// First up, find index where we will apply our changes
+			Row row = _Rows.FirstOrDefault(n => n.Node == removed);
+			if (row == null)
+				throw new Exception("CORRUPT ROW CACHE! (node not found)");
+			int index = _Rows.IndexOf(row);
+
+			// Remove any reference to old node
+			_Rows.RemoveAll(n => n.Node == removed);
+
+			// Add any new node, starting at index discovered earlier
+			long offset, remain, column, length;
+			foreach (ProjectNode node in added)
+			{
+				offset = node.Offset;
+				remain = node.Length;
+				column = offset % Settings.BYTES_PER_ROW;
+				length = Settings.BYTES_PER_ROW - column;
+
+				while (remain > 0)
+				{
+					if (length > remain)
+						length = remain;
+
+					_Rows.Insert(index, new Row(node, offset, length, (length == remain)));
+					index++;
+
+					offset += length;
+					remain -= length;
+					column = 0;
+					length = Settings.BYTES_PER_ROW;
+				}
+			}
+
+			_Scrollbar.Maximum = TotalRows - VisibleRows;
+		}
+
+		internal void Remove(ProjectNode[] removed, ProjectNode added)
+		{
+			// First up, find index where we will apply our changes
+			Row row = _Rows.FirstOrDefault(n => n.Node == removed[0]);
+			if (row == null)
+				throw new Exception("CORRUPT ROW CACHE! (node not found)");
+			int index = _Rows.IndexOf(row);
+
+			// Remove any reference to old nodes
+			foreach (ProjectNode node in removed)
+				_Rows.RemoveAll(n => n.Node == node);
+
+			// Add any new node, starting at index discovered earlier
+			long offset = added.Offset;
+			long remain = added.Length;
+			long column = offset % Settings.BYTES_PER_ROW;
+			long length = Settings.BYTES_PER_ROW - column;
+
+			while (remain > 0)
+			{
+				if (length > remain)
+					length = remain;
+
+				_Rows.Insert(index, new Row(added, offset, length, (length == remain)));
+				index++;
+
+				offset += length;
+				remain -= length;
+				column = 0;
+				length = Settings.BYTES_PER_ROW;
+			}
+
+			_Scrollbar.Maximum = TotalRows - VisibleRows;
+		}
+
+		internal void MoveToOffset(long offset)
+		{
+			long row = FindRowByOffset(offset, true);
+			if (row == -1)
+				row = FindRowByOffset(offset, false);
+			FirstVisibleIndex = row;
+		}
+
+		internal long MoveBy(long row_delta)
+		{
+			long row = _FirstVisible + row_delta;
+
+			if (row < 0)
+				row = 0;
+			else if (row > (TotalRows - VisibleRows))
+				row = TotalRows - VisibleRows;
+
+			FirstVisibleIndex = row;
+
+			return FirstVisibleRow.Offset;
+		}
+
 
 		internal long FindRowByOffset(long offset, bool exact = true)
 		{
-			long row = -1;
-			foreach (Info info in _Offsets)
+			long row = 0;
+
+			foreach (Row info in _Rows)
 			{
-				//if (info.Offset == offset)
-				//	break;
-				if (info.Offset <= offset && offset <= info.Offset + info.Length - 1)
+				if (exact && offset == info.Offset)
+					break;
+				if (!exact && info.Offset <= offset && offset <= info.Offset + info.Length - 1)
 					break;
 				row++; 
 			}
-			if (row == _Last)
+
+			if (row == TotalRows)
 				row = -1;
+
 			return row;
 		}
 
-		private Info[] _Offsets;
-		private long _Last;
 
-		internal struct Info
+		internal class Row
 		{
-			internal long Offset;
-			internal long Length;
+			internal ProjectNode Node { get; private set; }
+
+			internal long Offset { get; private set; }
+
+			internal long Length { get; private set; }
+
+			internal bool Last { get; private set; }
 
 			internal long StartCol { get { return Offset % Settings.BYTES_PER_ROW; } }
 
 			internal long EndCol { get { return StartCol + Length - 1; } }
 
-			internal long Rows
+
+			internal Row(ProjectNode node, long offset, long length, bool last)
 			{
-				get
-				{
-					long end = StartCol + Length;
-					if (end <= Settings.BYTES_PER_ROW)
-						return 1;
-					return (end / Settings.BYTES_PER_ROW) + 1;
-				}
+				Node = node;
+				Offset = offset;
+				Length = length;
+				Last = last;
 			}
+
+
+			public override string ToString()
+			{
+				return string.Format("[Row.Info] {0}-{1} | {2}", 
+					Offset.ToOffsetString(), (Offset+Length-1).ToOffsetString(), Node.ToString());
+			}
+
+			// Estimated memory size for storing a single column
+			// (3 longs, a bool and a reference assumed to be a 64bit, w/o any alignment)
+			internal static long SizeOf = (8 * 3) + 1 + 8;
 		}
+
+
+		private ScrollBar _Scrollbar;
+		private List<Row> _Rows;
+		private long _FirstVisible;
+		private long _VisibleRows;
+
 	}
 
 

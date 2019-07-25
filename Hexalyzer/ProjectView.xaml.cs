@@ -1266,6 +1266,11 @@ namespace Hexalyzer
 				findings.Clear();
 
 				long offset = start_offset;
+
+				// Skip any typed node
+				if (node.Type != null)
+					offset = node.Offset + node.Length;
+
 				while (offset <= end_offset)
 				{
 					if (_AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
@@ -1279,6 +1284,14 @@ namespace Hexalyzer
 						node = _Project.FindNodeByOffset(offset);
 						if (node == null)
 							break;
+
+						// Skip any typed node
+						if (node.Type != null)
+						{
+							offset = node.Offset + node.Length;
+							continue;
+						}
+
 						data = node.Data;
 					}
 

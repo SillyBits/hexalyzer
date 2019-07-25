@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 
 
@@ -49,6 +50,23 @@ namespace Hexalyzer
 		{
 			return new Point(pt.X, pt.Y);
 		}
+
+#if DEVENV
+		public static object Named(this ItemCollection coll, string name)
+		{
+			foreach (object item in coll)
+			{
+				if (item is FrameworkElement)
+				{
+					FrameworkElement elem = item as FrameworkElement;
+					if (elem.Name == name)
+						return elem;
+				}
+			}
+			return null;
+		}
+#endif
+
 	}
 
 

@@ -73,6 +73,7 @@
     </Compile>
     <Compile Include="Helper\DataBuffer.cs" />
     <Compile Include="Helper\Formatters.cs" />
+    <Compile Include="Tools\ProjectViewInfo.cs" />
     <Compile Include="Tools\ValuePreview.cs" />
     <Compile Include="Tools\DataBufferInfo.cs" />
     <Compile Include="Tools\ToolsPanel.xaml.cs">
@@ -195,6 +196,7 @@
     <Content Include="Resources\About.res" />
     <Content Include="Resources\Changelog.res" />
     <Content Include="Resources\icons8\Readme.txt" />
+    <Resource Include="Resources\Toolbar.View.ProjectViewInfo.png" />
     <Resource Include="Resources\Logo-128x128.ico" />
     <Resource Include="Resources\icons8\Toolbar.Tool.Analyze.png" />
     <Resource Include="Resources\Toolbar.Add.Split.png" />

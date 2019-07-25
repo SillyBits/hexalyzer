@@ -140,6 +140,7 @@ namespace Hexalyzer
 			};
 
 			create("View_DataBufferInfo", "Data buffer info", "Toolbar.View.DataBufferInfo.png", View_DataBufferInfo);
+			create("View_ProjectViewInfo", "Project view info", "Toolbar.View.ProjectViewInfo.png", View_ProjectViewInfo);
 #endif
 		}
 
@@ -386,6 +387,57 @@ namespace Hexalyzer
 			}
 		}
 
+		private void View_ProjectViewInfo(object sender, RoutedEventArgs e)
+		{
+			if (_IsCheckedToggling)
+				return;
+
+			bool active;
+			if (sender is MenuItem)
+			{
+				active = (sender as MenuItem).IsChecked;
+				ToggleButton btn = View_ToolBar.Items.Named("View_ProjectViewInfo_TB") as ToggleButton;
+				if (btn != null)
+				{
+					_IsCheckedToggling = true;
+					btn.IsChecked = active;
+					_IsCheckedToggling = false;
+				}
+			}
+			else if (sender is ToggleButton)
+			{
+				active = (sender as ToggleButton).IsChecked.GetValueOrDefault(false);
+				MenuItem menu = View_Menu.Items.Named("View_ProjectViewInfo_Menu") as MenuItem;
+				if (menu != null)
+				{
+					_IsCheckedToggling = true;
+					menu.IsChecked = active;
+					_IsCheckedToggling = false;
+				}
+			}
+			else
+				return;
+
+			if (!active) // <- Logic flipped as we're triggered after check was updated!
+			{
+				// Remove project view info panel
+				if (_ProjectViewInfo == null)
+					throw new Exception("Invalid internal state! (project view info == null)");
+				Tools.Remove(_ProjectViewInfo);
+				_ProjectViewInfo = null;
+			}
+			else
+			{
+				// Add project view info panel
+				if (_ProjectViewInfo != null)
+					throw new Exception("Invalid internal state! (project view info != null)");
+				_ProjectViewInfo = new Tools.ProjectViewInfo();
+				_ProjectViewInfo.View = PrjView;
+				Tools.Add(_ProjectViewInfo);
+			}
+		}
+#endif
+
 
 		private void Tools_Analyze(object sender, RoutedEventArgs e)
 		{
@@ -479,6 +531,7 @@ namespace Hexalyzer
 		// Tools shown in tools panel
 		private Tools.ValuePreview _ValuePreview;
 		private Tools.DataBufferInfo _DataBufferInfo;
+		private Tools.ProjectViewInfo _ProjectViewInfo;
 
 		private bool _IsCheckedToggling = false;
 	

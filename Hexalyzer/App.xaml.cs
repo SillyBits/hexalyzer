@@ -174,6 +174,12 @@ namespace Hexalyzer
 		public static int NEWLINE_CHARS = 1;
 
 		/// <summary>
+		/// FOr isolating offset aligned to no. of bytes per row
+		/// (shortcut for heavily used "offset - (offset % BYTES_PER_ROW)")
+		/// </summary>
+		public static long OFFSET_MASK = ~(BYTES_PER_ROW - 1);
+
+		/// <summary>
 		/// Columns per row
 		/// (used with hex column)
 		/// </summary>
@@ -230,6 +236,7 @@ namespace Hexalyzer
 			BYTES_PER_ROW = Config.Root.view.bytes_per_row;
 			BYTES_PER_COL = Config.Root.view.bytes_per_col;
 			COL_SEP_CHARS = Config.Root.view.col_separator;
+			OFFSET_MASK   = ~(BYTES_PER_ROW - 1);
 
 			COLS_PER_ROW  = BYTES_PER_ROW / BYTES_PER_COL;
 			CHARS_PER_COL = (BYTES_PER_COL * 3) - 1;

@@ -161,6 +161,31 @@ namespace Hexalyzer
 			}
 		}
 
+		public string[] Info
+		{
+			get
+			{
+				return new string[] {
+					"Offset: " + _Offset.ToOffsetString(),
+					"Row manager:",
+					string.Format("- Total   : {0}", _Manager.TotalRows),
+					string.Format("- Top     : {0}", _Manager.FirstVisibleIndex),
+					string.Format("- Visible : {0}", _Manager.VisibleRows),
+					string.Format("- Last    : {0}", _Manager.LastVisibleIndex),
+					string.Format("- Memory* : {0}", _Manager.TotalRows * RowManager.Row.SizeOf),
+					"Scroll bar:",
+					string.Format("- Value   : {0}", scroller.Value),
+					string.Format("- Maximum : {0}", scroller.Maximum),
+					string.Format("- Viewport: {0}", scroller.ViewportSize),
+					"Benchmarks:",
+					string.Format("- Render  : {0} ms",
+						(_RenderStopWatch != null) ? _RenderStopWatch.ElapsedMilliseconds.ToString() : "./."),
+					string.Format("- Analyzer: {0} ms", 
+						(_AnalyzerStopWatch != null) ? _AnalyzerStopWatch.ElapsedMilliseconds.ToString() : "./."),
+				};
+			}
+		}
+
 
 		public ProjectView()
 		{
@@ -761,10 +786,14 @@ namespace Hexalyzer
 		/// </summary>
 		private void _Render()
 		{
+			_RenderStopWatch = Stopwatch.StartNew();
+
 			DrawingContext dc = _BackingStoreContent.Open();
 			if (_Project != null)
 				_Render(dc);
 			dc.Close();
+
+			_RenderStopWatch.Stop();
 		}
 
 		/// <summary>
@@ -1188,6 +1217,8 @@ namespace Hexalyzer
 		{
 			if (_AnalyzerThread.IsAlive)
 				_AnalyzerCancelWork.Set();
+
+			_AnalyzerStopWatch = null;
 		}
 
 		private void _AnalyzerThreadFunc()
@@ -1244,11 +1275,16 @@ namespace Hexalyzer
 
 			while (!_AnalyzerThreadStopped)
 			{
+				if (_AnalyzerStopWatch != null)
+					_AnalyzerStopWatch.Stop();
+
 				// Wait for activation
 				Debug.WriteLine("!! Sleeping");
 				_AnalyzerWakeup.WaitOne();
 				_AnalyzerWakeup.Reset();
 				Debug.WriteLine("!! Woke up");
+
+				_AnalyzerStopWatch = Stopwatch.StartNew();
 
 				if (_AnalyzerThreadStopped)
 					break;
@@ -1349,6 +1385,9 @@ namespace Hexalyzer
 				}
 			}
 
+			if (_AnalyzerStopWatch != null)
+				_AnalyzerStopWatch.Stop();
+
 			// End of thread
 			Debug.WriteLine("!! Ended");
 		}
@@ -1435,6 +1474,7 @@ namespace Hexalyzer
 		private RowManager _Manager;
 
 		private DrawingGroup _BackingStoreContent = new DrawingGroup();
+		private Stopwatch _RenderStopWatch;
 
 		private Position _MouseLeftPos;
 		private Scope _MouseLeftScope;
@@ -1466,6 +1506,7 @@ namespace Hexalyzer
 		private volatile bool _AnalyzerThreadStopped = false;
 		private ManualResetEvent _AnalyzerWakeup;
 		private ManualResetEvent _AnalyzerCancelWork;
+		private Stopwatch _AnalyzerStopWatch;
 
 	}
 

@@ -107,7 +107,8 @@ namespace Hexalyzer.Helper
 	{
 		public string Format(long offset, ProjectNode node)
 		{
-			if (offset <= node.Offset)
+			// Display values on first line only
+			if (offset == node.Offset)
 				return Datatypes.Helpers.ToString(node.Type, node.Data);
 			return "";
 		}
@@ -117,8 +118,6 @@ namespace Hexalyzer.Helper
 	{
 		public string Format(long offset, ProjectNode node)
 		{
-			//return node.ToString();
-
 			// Display remarks on first line only
 			if (offset == node.Offset)
 				return node.Remark;

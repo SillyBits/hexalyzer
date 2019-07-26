@@ -1064,7 +1064,7 @@ namespace Hexalyzer
 			if (node == null)
 				return;
 
-			long row = _Manager.FindRowByOffset(node.Offset);
+			long row = _Manager.FindRowByOffset(node.Offset) - _Manager.FirstVisibleIndex;
 			if (row < 0)
 				return;
 

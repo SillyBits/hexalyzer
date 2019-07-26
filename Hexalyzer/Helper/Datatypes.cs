@@ -207,7 +207,7 @@ namespace Hexalyzer.Datatypes
 				}
 				else if (len > 0)
 				{
-					if (len <= 4096 && offset + len < data.Count)
+					if (len <= 4096 && offset + len <= data.Count)
 					{
 						//DataBuffer<byte,byte[]>.Accessor accessor = data as DataBuffer<byte,byte[]>.Accessor;
 						FileBuffer<byte>.Accessor accessor = data as FileBuffer<byte>.Accessor;

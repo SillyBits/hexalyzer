@@ -934,6 +934,8 @@ namespace Hexalyzer
 					type = Type.GetType("System." + type_s);
 				if (type == null)
 					type = Type.GetType("Hexalyzer.Datatypes." + type_s);
+				if (type == null)
+					type = Plugin.PluginHandler.GetDatatype(type_s);
 			}
 
 			return new ProjectNode(parent, offset, length, type, element.InnerText);
@@ -956,7 +958,12 @@ namespace Hexalyzer
 			element.SetAttribute("length", Length.ToString());
 
 			if (Type != null)
-				element.SetAttribute("type", Type.Name);
+			{
+				if (Type.GetInterface("IDatatype") != null)
+					element.SetAttribute("type", Type.FullName);
+				else
+					element.SetAttribute("type", Type.Name);
+			}
 
 			if (!string.IsNullOrEmpty(Remark))
 				element.InnerText = Remark;

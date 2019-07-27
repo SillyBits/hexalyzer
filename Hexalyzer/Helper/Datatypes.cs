@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -348,6 +349,24 @@ namespace Hexalyzer.Datatypes
 					case "WideString":	obj = WideString.FromData(data, offset); if (obj != null) return obj.ToString(); else break;
 					case "VarString":	obj = VarString.FromData(data, offset); if (obj != null) return obj.ToString(); else break;
 				}
+
+				if (type.GetInterface("IDatatype") != null)
+				{
+					try
+					{
+						Plugin.IDatatype datatype = Activator.CreateInstance(type) as Plugin.IDatatype;
+						if (datatype != null)
+							datatype = datatype.FromData(data, offset);
+						if (datatype != null)
+							return datatype.ToString();
+					}
+					catch (Exception)
+					{
+						//string msg = string.Format("Unable to create instance of type {0}!", 
+						//	type.FullName);
+						//Debug.Fail(msg);
+					}
+				}
 			}
 			catch (Exception)
 			{ }
@@ -395,6 +414,21 @@ namespace Hexalyzer.Datatypes
 				case "AsciiString":	return AsciiString.LengthOf(data, offset);
 				case "WideString":	return WideString.LengthOf(data, offset);
 				case "VarString":	return VarString.LengthOf(data, offset);
+			}
+
+			if (type.GetInterface("IDatatype") != null)
+			{
+				try
+				{
+					Plugin.IDatatype datatype = Activator.CreateInstance(type) as Plugin.IDatatype;
+					return (int)datatype.LengthOf(data, offset);
+				}
+				catch (Exception)
+				{
+					string msg = string.Format("Unable to create instance of type {0}!", 
+						type.FullName);
+					Debug.Fail(msg);
+				}
 			}
 
 			throw new ArgumentException(string.Format("Unknown type {0}", type));

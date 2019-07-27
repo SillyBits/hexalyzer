@@ -2148,7 +2148,7 @@ namespace Hexalyzer
 						return typeof(short);
 			}
 
-			if (maxlen >= 1 && value < byte.MaxValue && offset + 1 <= data.Count)
+			if (minlen <= 1 && maxlen >= 1 && value < byte.MaxValue && offset + 1 <= data.Count)
 			{
 				if (sign >= 0 && Helpers.ToByte(data, (int)offset) == value)
 					return typeof(byte);

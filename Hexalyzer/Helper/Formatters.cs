@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
+
 
 namespace Hexalyzer.Helper
 {
@@ -10,6 +12,7 @@ namespace Hexalyzer.Helper
 	public interface ITextFormatter
 	{
 		string Format(long offset, ProjectNode node);
+		Brush Color(long offset, ProjectNode node);
 	}
 
 
@@ -19,6 +22,13 @@ namespace Hexalyzer.Helper
 		{
 			offset -= offset % Settings.BYTES_PER_ROW;
 			return offset.ToOffsetString(false);
+		}
+
+		public Brush Color(long offset, ProjectNode node)
+		{
+			if (node.Type != null)
+				return Brushes.DarkGreen;
+			return Brushes.Black;
 		}
 	}
 
@@ -71,6 +81,11 @@ namespace Hexalyzer.Helper
 
 			return sb.ToString();
 		}
+
+		public Brush Color(long offset, ProjectNode node)
+		{
+			return Brushes.Black;
+		}
 	}
 
 	public class AsciiFormatter : ITextFormatter
@@ -101,6 +116,11 @@ namespace Hexalyzer.Helper
 
 			return sb.ToString();
 		}
+
+		public Brush Color(long offset, ProjectNode node)
+		{
+			return Brushes.Black;
+		}
 	}
 
 	public class ValueFormatter : ITextFormatter
@@ -112,6 +132,11 @@ namespace Hexalyzer.Helper
 				return Datatypes.Helpers.ToString(node.Type, node.Data);
 			return "";
 		}
+
+		public Brush Color(long offset, ProjectNode node)
+		{
+			return Brushes.Black;
+		}
 	}
 
 	public class RemarkFormatter : ITextFormatter
@@ -122,6 +147,11 @@ namespace Hexalyzer.Helper
 			if (offset == node.Offset)
 				return node.Remark;
 			return "";
+		}
+
+		public Brush Color(long offset, ProjectNode node)
+		{
+			return Brushes.Black;
 		}
 	}
 

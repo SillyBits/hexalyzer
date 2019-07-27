@@ -845,7 +845,7 @@ namespace Hexalyzer
 					break;
 				rect.Width = w;
 
-				RenderHelper.RenderText(dc, column.Formatter.Format(row.Offset, row.Node), rect, 
+				RenderHelper.RenderText(dc, column.Formatter.Format(row.Offset, row.Node), rect, column.Formatter.Color(row.Offset, row.Node),
 					HorizontalAlignment.Left, VerticalAlignment.Center, rect.Width, rect.Height);
 
 				rect.X += rect.Width + TextColumn.Margin;
@@ -2260,17 +2260,18 @@ namespace Hexalyzer
 			dc.DrawLine(FramePen, rect.TopRight, pt);
 
 			rect.Inflate(-TextColumn.Margin, -TextColumn.HeaderMargin);
-			RenderText(dc, column.Title, rect, column.Alignment, VerticalAlignment.Center, rect.Width, _CharHeight);
+			RenderText(dc, column.Title, rect, Brushes.Black, column.Alignment, VerticalAlignment.Center, rect.Width, _CharHeight);
 		}
 
-		internal static void RenderText(DrawingContext dc, string str, Rect rect, HorizontalAlignment h_align, 
-			VerticalAlignment v_align = VerticalAlignment.Center, double max_width = 0, double max_height = 0)
+		internal static void RenderText(DrawingContext dc, string str, Rect rect, Brush color,
+			HorizontalAlignment h_align, VerticalAlignment v_align = VerticalAlignment.Center, 
+			double max_width = 0, double max_height = 0)
 		{
 			if (str == null)
 				return;
 
 			FormattedText text = new FormattedText(str, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, 
-				Settings.FONT_TYPEFACE, Settings.FONT_SIZE, Brushes.Black, null, TextFormattingMode.Display, 
+				Settings.FONT_TYPEFACE, Settings.FONT_SIZE, color/*Brushes.Black*/, null, TextFormattingMode.Display, 
 				_DpiInfo.PixelsPerDip);
 
 			// Protect against underflows with stretchable column moved out of view

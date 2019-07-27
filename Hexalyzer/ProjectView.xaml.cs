@@ -1284,13 +1284,17 @@ namespace Hexalyzer
 				long end_offset = _Manager.LastVisibleRow.Offset + _Manager.LastVisibleRow.Length - 1;
 				IReadOnlyList<byte> data = node.Data;
 
+				// Take a snapshot on node offets (all excl. first node at 0)
+				List<long> offsets = _Project.Nodes.Select(n => n.Offset).ToList();
+				offsets.RemoveAt(0);
+
 				findings.Clear();
 
 				long offset = start_offset;
 
-				// Skip any typed node
-				if (node.Type != null)
-					offset = node.Offset + node.Length;
+				//// Skip any typed node -> Configurable option
+				//if (node.Type != null)
+				//	offset = node.Offset + node.Length;
 
 				while (offset <= end_offset)
 				{
@@ -1306,12 +1310,12 @@ namespace Hexalyzer
 						if (node == null)
 							break;
 
-						// Skip any typed node
-						if (node.Type != null)
-						{
-							offset = node.Offset + node.Length;
-							continue;
-						}
+						//// Skip any typed node -> Configurable option
+						//if (node.Type != null)
+						//{
+						//	offset = node.Offset + node.Length;
+						//	continue;
+						//}
 
 						data = node.Data;
 					}
@@ -1333,6 +1337,17 @@ namespace Hexalyzer
 						if (_Project == null || _AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 							break;
 
+						// Filesize delta checking
+						finding = PrivateAnalyzers.CheckFilesizeCandidate(data, rel_offset, _Project.Filesize - offset);
+						if (finding != null)
+						{
+							finding.NodeOffset = node.Offset;
+							inject(finding, Brushes.AliceBlue);
+							break;
+						}
+						if (_Project == null || _AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
+							break;
+
 						// String checking
 						finding = PrivateAnalyzers.CheckStringCandidate(data, rel_offset);
 						if (finding != null)
@@ -1343,6 +1358,27 @@ namespace Hexalyzer
 						}
 						if (_Project == null || _AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 							break;
+
+						// Offset to nodes checking (skipped with too few nodes avail)
+						if (offsets.Count > 10)
+						{ 
+							Type t = null;
+							foreach (long ofs in offsets)
+							{
+								t = Analyzers.IsOfValue(data, rel_offset, ofs, 2);
+								if (t != null)
+								{
+									finding = new Analyzers.Finding(t, rel_offset, Helpers.LengthOf(t, data, rel_offset));
+									finding.NodeOffset = node.Offset;
+									inject(finding, Brushes.Honeydew);//Brushes.GreenYellow);
+									break;
+								}
+								if (_Project == null || _AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
+									break;
+							}
+							if (t != null)
+								break;
+						}
 
 						break;
 					}

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 
 using Hexalyzer.Plugin;
@@ -101,7 +103,17 @@ namespace UnrealEngine
 
 		public ImageSource Icon
 		{
-			get { return null; }
+			get
+			{
+				if (_Icon == null)
+				{
+					Uri uri = new Uri("pack://application:,,,/UnrealEngine.Plugin;component/Resources/Datatype.UEStrWithHash.png");
+					_Icon = new BitmapImage(uri);
+					if (_Icon != null)
+						_Icon.Freeze();
+				}
+				return _Icon;
+			}
 		}
 
 		public IDatatype Empty
@@ -198,6 +210,7 @@ namespace UnrealEngine
 		}
 
 
+		private static ImageSource _Icon;
 		private static UEStrWithHash _INSTANCE = new UEStrWithHash();
 
 	}

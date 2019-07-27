@@ -52,7 +52,7 @@ namespace Hexalyzer
 					_Manager.Update(_Project != null ? Project.Nodes : null);
 
 					// Trigger re-rendering
-					Offset = 0;
+					_Render();
 				}
 			}
 		}

@@ -77,6 +77,7 @@ namespace Hexalyzer.Plugin
 			{
 				string name = pair.Key;//plugin.GetType().Name;
 				IPlugin plugin = pair.Value;
+				toolbar = null;
 
 				Type[] datatypes = plugin.GetSupportedDatatypes();
 				if (datatypes != null && datatypes.Length > 0)
@@ -85,7 +86,6 @@ namespace Hexalyzer.Plugin
 						false, null, resource_separator);
 					menu.Tag = new Info(typeof(IPlugin), plugin);
 					resource_separator = false;
-					toolbar = null;
 
 					foreach (Type datatype in datatypes)
 					{
@@ -109,6 +109,8 @@ namespace Hexalyzer.Plugin
 							{
 								if (toolbar == null)
 									toolbar = wnd.AddCustomToolbar(name + "_TB");
+								//else
+								//	toolbar.Items.Add(new Separator());
 								tb_button = wnd.AddCustomToolbarButton(toolbar, dt_name, dt_inst.Name, dt_inst.Icon, false, _OnToolbar_Click, false);
 								tb_button.Tag = info;
 							}
@@ -125,7 +127,6 @@ namespace Hexalyzer.Plugin
 						false, null, view_separator);
 					menu.Tag = plugin;
 					view_separator = false;
-					toolbar = null;
 
 					foreach (Type panel in panels)
 					{
@@ -147,6 +148,8 @@ namespace Hexalyzer.Plugin
 						//	{
 						//		if (toolbar == null)
 						//			toolbar = wnd.AddCustomToolbar(name + "_TB");
+						//		else
+						//			toolbar.Items.Add(new Separator());
 						//		tb_button = wnd.AddCustomToolbarButton(toolbar, dt_name, dt_inst.Name, dt_inst.Icon, false, _OnToolbar_Click, false);
 						//		tb_button.Tag = info;
 						//	}
@@ -163,7 +166,6 @@ namespace Hexalyzer.Plugin
 						false, null, tool_separator);
 					menu.Tag = plugin;
 					tool_separator = false;
-					toolbar = null;
 
 					foreach (Type tool in tools)
 					{
@@ -185,6 +187,8 @@ namespace Hexalyzer.Plugin
 						//	{
 						//		if (toolbar == null)
 						//			toolbar = wnd.AddCustomToolbar(name + "_TB");
+						//		else
+						//			toolbar.Items.Add(new Separator());
 						//		tb_button = wnd.AddCustomToolbarButton(toolbar, dt_name, dt_inst.Name, dt_inst.Icon, false, _OnToolbar_Click, false);
 						//		tb_button.Tag = info;
 						//	}

@@ -11,7 +11,7 @@
 
 	<DockPanel x:Name="dock">
 
-		<Menu DockPanel.Dock="Top" HorizontalAlignment="Stretch" Background="White" BorderBrush="DarkGray" BorderThickness="0,0,0,1">
+		<Menu x:Name="menues" DockPanel.Dock="Top" HorizontalAlignment="Stretch" Background="White" BorderBrush="DarkGray" BorderThickness="0,0,0,1">
 			
 			<Menu.Resources>
 				<Style TargetType="Image">
@@ -219,9 +219,13 @@
 
 		</Menu>
 
-		<ToolBarTray DockPanel.Dock="Top" HorizontalAlignment="Left" Background="White">
+		<ToolBarTray x:Name="toolbars" DockPanel.Dock="Top" HorizontalAlignment="Left" Background="White">
 
 			<ToolBarTray.Resources>
+
+				<Style TargetType="ToolBar">
+					<Setter Property="BorderBrush" Value="Black" />
+				</Style>
 				
 				<Style TargetType="Image">
 					<Setter Property="Width" Value="20" />
@@ -259,7 +263,7 @@
 			-->
 			
 			<!-- File operations -->
-			<ToolBar Band="1" BandIndex="1" BorderBrush="Black">
+			<ToolBar Band="1" BandIndex="1">
 
 				<Button x:Name="File_New_TB" ToolTip="Create new project (Ctrl+N)" Click="File_New_Click">
 					<Image Source="Resources/icons8/Toolbar.File.New.png" />
@@ -277,7 +281,7 @@
 			</ToolBar>
 
 			<!-- Resource -->
-			<ToolBar x:Name="Resource_ToolBar" Band="1" BandIndex="2" BorderBrush="Black">
+			<ToolBar x:Name="Resource_ToolBar" Band="1" BandIndex="2">
 
 				<Button ToolTip="Split at position (+)" Tag="-" Click="Resource_Add">
 					<Image Source="Resources/Toolbar.Add.Split.png" />
@@ -340,14 +344,6 @@
 					<Image Source="Resources/Toolbar.Add.Number.Double.png" />
 				</Button>
 
-				<!--
-				<Separator />
-
-				<Button ToolTip="Add user-defined structure (U)" Tag="Structure" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Structure.png" />
-				</Button>
-				-->
-
 				<Separator />
 
 				<Button ToolTip="Remove (Del)" Click="Resource_Remove">
@@ -357,7 +353,7 @@
 			</ToolBar>
 
 			<!-- View -->
-			<ToolBar x:Name="View_ToolBar" Band="1" BandIndex="3" BorderBrush="Black">
+			<ToolBar x:Name="View_ToolBar" Band="1" BandIndex="3">
 
 				<ToggleButton x:Name="View_ValuePreview_TB" ToolTip="Value preview" Click="View_ValuePreview" IsThreeState="False" IsEnabled="True">
 					<Image Source="Resources/icons8/Toolbar.View.ValuePreview.png" />
@@ -366,7 +362,7 @@
 			</ToolBar>
 
 			<!-- Tools -->
-			<ToolBar x:Name="Tools_ToolBar" Band="1" BandIndex="3" BorderBrush="Black">
+			<ToolBar x:Name="Tools_ToolBar" Band="1" BandIndex="4">
 
 				<ToggleButton x:Name="Tools_Analyze_TB" ToolTip="Toggle background analyzer" Click="Tools_Analyze" IsThreeState="False" IsEnabled="True">
 					<Image Source="Resources/icons8/Toolbar.Tool.Analyze.png" />

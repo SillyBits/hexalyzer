@@ -343,7 +343,6 @@ namespace Hexalyzer
 		}
 
 
-
 		protected override void OnDpiChanged(DpiScale oldDpiScaleInfo, DpiScale newDpiScaleInfo)
 		{
 			base.OnDpiChanged(oldDpiScaleInfo, newDpiScaleInfo);
@@ -568,7 +567,6 @@ namespace Hexalyzer
 					else if (target == Scope.Remark)
 					{
 						_HideCaret();
-
 						_ShowRemarkTextbox();
 					}
 					else

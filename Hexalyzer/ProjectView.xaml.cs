@@ -17,6 +17,7 @@ using Hexalyzer.Datatypes;
 /*
  * TODO:
  * 
+ * - Remark textbox: Allow to navigate using mouse w/o closing it
  * 
  */
 
@@ -69,6 +70,7 @@ namespace Hexalyzer
 				if (_Project == null)
 					return;
 
+				long delta = _Offset - value;
 				_Offset = value;
 
 				long from = -1, to = -1;
@@ -80,12 +82,46 @@ namespace Hexalyzer
 
 					from = _Offset;
 					to   = _Manager.LastVisibleRow.Offset + _Manager.LastVisibleRow.Length - 1;
-
-					// Let analyzer know offset was changed
-					if (_IsAnalyzerActive)
-						_StartAnalyzer();
 				}
+
 				OffsetChanged?.Invoke(this, from, to);
+
+				if (_MouseLeftPos >= 0)
+				{
+					if (_IsCaretVisible != null)
+					{
+						_HideCaret();
+						_CaretPos = _OffsetToPixels(_MouseLeftPos, _MouseLeftScope);
+						_ShowCaret();
+					}
+
+					if (_SelectionStart >= 0)
+					{
+						_ShowSelection();
+					}
+
+					if (_RemarkTextBox != null)
+					{
+						ProjectNode node = _Project.FindNodeByOffset(_MouseLeftPos);
+						if (node != null)
+						{
+							Position pos = _Manager.OffsetToChars(node.Offset);
+							double y = (pos.Row * RenderHelper.RowHeight) + RenderHelper.HeaderHeight - 3;
+							if (y <= RenderHelper.HeaderHeight)
+								y = RenderHelper.HeaderHeight;
+							else if (y > (ActualHeight - _RemarkTextBox.Height))
+								y = ActualHeight - _RemarkTextBox.Height;
+
+							Thickness margin = _RemarkTextBox.Margin;
+							margin.Top = y;
+							_RemarkTextBox.Margin = margin;
+						}
+					}
+				}
+
+				// Let analyzer know offset was changed
+				if (delta != 0 && _IsAnalyzerActive)
+					_StartAnalyzer();
 			}
 		}
 
@@ -93,31 +129,27 @@ namespace Hexalyzer
 		public event SelectionChangedHandler SelectionChanged;
 		public long Selection
 		{
-			get
-			{
-				if (_CaretPos == null || _MouseLeftPos == null)
-					return -1;
-				return _CharsToOffset(_MouseLeftPos);
-			}
+			get	{ return _MouseLeftPos; }
 			set
 			{
 				long from = -1, to = -1;
 				if (_MouseLeftScope != Scope.Remark)
 				{
-					if (_SelectionStart != null)
+					if (_SelectionStart >= 0)
 					{
-						from = _CharsToOffset(_SelectionStart);
-						to   = _CharsToOffset(_MouseLeftPos);//, false);
+						from = _SelectionStart;
+						to   = _MouseLeftPos;
 						if (from > to)
 						{
 							long swap = from;
 							from = to;
 							to   = swap;
 						}
+						to--;
 					}
-					else if (_MouseLeftPos != null)
+					else if (_MouseLeftPos >= 0)
 					{
-						from = _CharsToOffset(_MouseLeftPos);
+						from = _MouseLeftPos;
 						to   = 0;
 					}
 				}
@@ -131,9 +163,9 @@ namespace Hexalyzer
 		{
 			get
 			{
-				if (_CaretPos == null || _Project == null)
+				if (_MouseLeftPos < 0 || _Project == null)
 					return null;
-				return _Project.FindNodeByOffset(_CharsToOffset(_MouseLeftPos));
+				return _Project.FindNodeByOffset(_MouseLeftPos);
 			}
 			//set
 			//{
@@ -166,7 +198,9 @@ namespace Hexalyzer
 			get
 			{
 				return new string[] {
-					"Offset: " + _Offset.ToOffsetString(),
+					"Offset   : " + _Offset.ToOffsetString(),
+					"Mouse ofs: " + _MouseLeftPos.ToOffsetString(),
+					"Selection: " + _SelectionStart.ToOffsetString(),
 					"Row manager:",
 					string.Format("- Total   : {0}", _Manager.TotalRows),
 					string.Format("- Top     : {0}", _Manager.FirstVisibleIndex),
@@ -191,6 +225,8 @@ namespace Hexalyzer
 		{
 			_Project = null;
 			_Offset = 0;
+			_MouseLeftPos = -1;
+			_SelectionStart = -1;
 
 			Initialized += _Initialized;
 			Loaded += _Loaded;
@@ -240,14 +276,14 @@ namespace Hexalyzer
 		/// <param name="type">Type of resource to add</param>
 		public void AddResource(Type type)
 		{
-			if (_MouseLeftPos == null)
+			if (_MouseLeftPos < 0)
 				return;
 			
 			ProjectNode source = CurrentNode;
 			if (source == null)
 				return;
 
-			long offset = _CharsToOffset(_MouseLeftPos);
+			long offset = _MouseLeftPos;
 
 			long split_at = offset - source.Offset;
 			ProjectNode[] added = _Project.InsertAt(source, type, split_at, -1);
@@ -269,31 +305,9 @@ namespace Hexalyzer
 			{
 				// End of new node for typed, start of node for un-typed ones
 				long length = (type != null) ? selected.Length : 0;
+				_MouseLeftPos += length;
 
-				if (_MouseLeftPos.Col + length < Settings.BYTES_PER_ROW)
-				{
-					// Simple break
-					_MouseLeftPos.Row++; // 1 for forcing into next segment
-					_MouseLeftPos.Col += length;
-				}
-				else
-				{
-					// Have to move downwards a N rows (N>1)
-					length -= Settings.BYTES_PER_ROW - _MouseLeftPos.Col;
-					_MouseLeftPos.Row += 2 // 1 for forcing into next segment, 1 for Col wrapping around into next row
-									  + ((length + (selected.Offset % Settings.BYTES_PER_ROW)) / Settings.BYTES_PER_ROW);
-					_MouseLeftPos.Col = length % Settings.BYTES_PER_ROW;
-				}
-
-				// Scroll upwards in case we went beyond bottom row
-				if (_MouseLeftPos.Row >= _Manager.VisibleRows)
-				{
-					//TODO: Move whole node into view?
-					_Offset = _Manager.MoveBy(+1);
-					_MouseLeftPos.Row = _Manager.VisibleRows - 1;
-				}
-
-				_CaretPos = _CharsToPixels(_MouseLeftPos, _MouseLeftScope);
+				_CaretPos = _OffsetToPixels(_MouseLeftPos, _MouseLeftScope);
 				_ShowCaret();
 			}
 
@@ -336,14 +350,14 @@ namespace Hexalyzer
 			// Renew caches
 			RenderHelper.UpdateCache(newDpiScaleInfo);
 
-			_Manager.VisibleRows = (long)((ActualHeight - RenderHelper.HeaderHeight) / RenderHelper.RowHeight);
+			_Manager.VisibleRows = (int)((ActualHeight - RenderHelper.HeaderHeight) / RenderHelper.RowHeight);
 		}
 
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
 			if (sizeInfo.HeightChanged)
 			{
-				_Manager.VisibleRows = (long)((sizeInfo.NewSize.Height - RenderHelper.HeaderHeight) / RenderHelper.RowHeight);
+				_Manager.VisibleRows = (int)((sizeInfo.NewSize.Height - RenderHelper.HeaderHeight) / RenderHelper.RowHeight);
 			}
 
 			//_Render(); => base will trigger this
@@ -373,7 +387,7 @@ namespace Hexalyzer
 
 			// Received a 120 for a single move
 			// Make sure this is always the case
-			long lines = -e.Delta / 20;
+			int lines = -e.Delta / 20;
 
 			Offset = _Manager.MoveBy(lines);
 		}
@@ -419,9 +433,9 @@ namespace Hexalyzer
 				Scope scope = _PixelsToChars(pos, false, out chars);
 				if (scope == _MouseLeftScope && (scope == Scope.Hex || scope == Scope.Ascii))
 				{
-					if (_SelectionStart == null)
+					if (_SelectionStart < 0)
 						_SelectionStart = _MouseLeftPos;
-					_MouseLeftPos = chars;
+					_MouseLeftPos = _Manager.CharsToOffset(chars);
 					_ShowSelection();
 				}
 				else
@@ -461,7 +475,12 @@ namespace Hexalyzer
 
 			Point pos = e.GetPosition(this);
 
-			if (pos.Y <= RenderHelper.HeaderHeight)
+			if (_RemarkTextBox != null && _RemarkTextBox == InputHitTest(pos))
+			{
+				// Let's see if bailing out here will do the trick with textbox accepting clicks
+				return;
+			}
+			else if (pos.Y <= RenderHelper.HeaderHeight)
 			{
 				if (!IsMouseCaptured)
 					CaptureMouse();
@@ -486,7 +505,9 @@ namespace Hexalyzer
 			}
 			else
 			{
-				_MouseLeftScope = _PixelsToChars(pos, out _MouseLeftPos);
+				Position chars;
+				_MouseLeftScope = _PixelsToChars(pos, out chars);
+				_MouseLeftPos = _Manager.CharsToOffset(chars);
 				_ClearSelection();
 			}
 		}
@@ -503,7 +524,12 @@ namespace Hexalyzer
 
 			Point pos = e.GetPosition(this);
 
-			if (_ActiveColumn != null)
+			if (_RemarkTextBox != null && _RemarkTextBox == InputHitTest(pos))
+			{
+				// Let's see if bailing out here will do the trick with textbox accepting clicks
+				return;
+			}
+			else if (_ActiveColumn != null)
 			{
 				_ActiveColumn = null;
 				Cursor = null;
@@ -516,23 +542,24 @@ namespace Hexalyzer
 			{
 				Position up;
 				Scope target = _PixelsToChars(pos, out up);
-				if (target == _MouseLeftScope && _MouseLeftPos.Equals(up))
+				if (target == _MouseLeftScope && _MouseLeftPos == _Manager.CharsToOffset(up))
 				{
 					if (target == Scope.Hex || target == Scope.Ascii)
 					{
 						// Adjust column if needed
-						var info = _Manager[_Manager.FirstVisibleIndex + _MouseLeftPos.Row];
-						long start = info.StartCol;
-						if (start > _MouseLeftPos.Col)
+						var info = _Manager[_Manager.FirstVisibleIndex + up.Row];
+						int start = info.StartCol;
+						if (start > up.Col)
 						{
-							_MouseLeftPos.Col = start;
+							up.Col = start;
 						}
 						else
 						{
-							long end = info.EndCol;
-							if (end < _MouseLeftPos.Col)
-								_MouseLeftPos.Col = end;
+							int end = info.EndCol;
+							if (end < up.Col)
+								up.Col = end;
 						}
+						_MouseLeftPos = _Manager.CharsToOffset(up);
 
 						_CloseRemarkTextbox();
 						_ShowCaret();
@@ -568,19 +595,9 @@ namespace Hexalyzer
 			bool shift = e.KeyboardDevice.Modifiers == ModifierKeys.Shift;
 			bool ctrl  = e.KeyboardDevice.Modifiers == ModifierKeys.Control;
 
-			if (shift)
-			{
-				if (_SelectionStart == null)
-					_SelectionStart = _MouseLeftPos.Clone();
-			}
-			else
-			{
-				_ClearSelection();
-			}
-
-			long ofs = _Offset;
-			long row = _MouseLeftPos.Row;
-			long col = _MouseLeftPos.Col;
+			int row = _Manager.FindRowIndexByOffset(_MouseLeftPos, false);
+			int col = (int)(_MouseLeftPos % Settings.BYTES_PER_ROW);
+			RowManager.Row r = _Manager[row];
 
 			switch (e.Key)
 			{
@@ -593,114 +610,85 @@ namespace Hexalyzer
 					break;
 
 				case Key.Left:
-					col--;
+					if (col > r.StartCol)
+						col--;
+					else
+					{
+						col = Settings.BYTES_PER_ROW - 1;
+						row--;
+					}
 					break;
 
 				case Key.Right:
-					col++;
+					if (col < r.EndCol)
+						col++;
+					else
+					{
+						col = 0;
+						row++;
+					}
 					break;
 
 				case Key.Home:
 					col = 0;
 					if (ctrl)
-					{
-						row = ofs = 0;
-						_Manager.FirstVisibleIndex = 0;
-					}
+						row = 0;
 					break;
 
 				case Key.End:
 					col = Settings.BYTES_PER_ROW - 1;
 					if (ctrl)
-					{
-						row = _Manager.VisibleRows - 1;
-						ofs = _Manager.MoveBy(int.MaxValue);
-					}
+						row = _Manager.TotalRows - 1;
 					break;
 
 				case Key.PageUp:
-					ofs = _Manager.MoveBy(-_Manager.VisibleRows);
+					row -= _Manager.VisibleRows;
 					break;
 
 				case Key.PageDown:
-					ofs = _Manager.MoveBy(+_Manager.VisibleRows);
+					row += _Manager.VisibleRows;
 					break;
 
 				default:
 					return;
 			}
 
-			// Adjust row if needed
-			bool adjust_col = false;
-			if (row != _MouseLeftPos.Row)
+			if (row < 0)
 			{
-				if (row < 0)
-				{
-					ofs = _Manager.MoveBy(row);
-					row = 0;
-				}
-				else if (row > _Manager.VisibleRows - 1)
-				{
-					ofs = _Manager.MoveBy(row - (_Manager.VisibleRows - 1));
-					row = _Manager.VisibleRows - 1;
-				}
-
-				adjust_col = true;
+				row = 0;
+				col = 0;
 			}
-
-			// Save offset in case it has changed
-			if (ofs != _Offset)
+			else if (row > _Manager.TotalRows - 1)
 			{
-				Offset = ofs;
-
-				adjust_col = true;
+				row = _Manager.TotalRows - 1;
+				col = Settings.BYTES_PER_ROW - 1;
 			}
+			r = _Manager[row];
 
-			// Adjust column if needed
-			if (col != _MouseLeftPos.Col || adjust_col)
-			{
-				var info = _Manager[_Manager.FirstVisibleIndex + row];
+			if (col < r.StartCol)
+				col = r.StartCol;
+			else if (col > r.EndCol)
+				col = r.EndCol;
 
-				long start = info.StartCol;
-				if (start > col)
-				{
-					//TODO: Should head to end of previous row
-					if (row > 0 && e.Key == Key.Left)
-					{
-						row--;
-						col = _Manager[_Manager.FirstVisibleIndex + row].EndCol;
-					}
-					else
-						col = start;
-				}
-				else
-				{
-					long end = info.EndCol;
-					if (end < col)
-					{
-						//TODO: Should head to start of next row
-						if (row < _Manager.VisibleRows - 1 && e.Key == Key.Right)
-						{
-							row++;
-							col = _Manager[_Manager.FirstVisibleIndex + row].StartCol;
-						}
-						else
-							col = end;
-					}
-				}
-			}
+			if (shift && _SelectionStart < 0)
+				_SelectionStart = _MouseLeftPos;
 
-			if (row != _MouseLeftPos.Row || col != _MouseLeftPos.Col)
-			{ 
-				// Adjust pos and re-start caret timer
-				_MouseLeftPos.Row = row;
-				_MouseLeftPos.Col = col;
+			_MouseLeftPos = (r.Offset & Settings.OFFSET_MASK) + col;
+			Selection = 0;
 
-				_ShowCaret();
-			}
+			if (row < _Manager.FirstVisibleIndex)
+				Offset = r.Offset;
+			else if (row > _Manager.TotalRows - _Manager.VisibleRows + 1)
+				Offset = _Manager.MoveBy(_Manager.TotalRows - _Manager.VisibleRows + 1);
+			else if (row >= _Manager.LastVisibleIndex)
+				Offset = _Manager.MoveBy(row - _Manager.LastVisibleIndex);
+			else
+				Offset = _Offset;
 
 			if (shift)
 				_ShowSelection();
+			else
+				_ClearSelection();
 		}
 
 		protected override void OnKeyUp(KeyEventArgs e)
@@ -778,7 +766,7 @@ namespace Hexalyzer
 		{
 			Debug.WriteLine("Scroll: " + e.NewValue);
 
-			Offset = _Manager.MoveBy((long)e.NewValue);
+			Offset = _Manager.MoveBy((int)e.NewValue);
 		}
 
 		/// <summary>
@@ -811,7 +799,7 @@ namespace Hexalyzer
 			Point pt0 = new Point(Margin.Left, 0);
 			Point pt1 = new Point(ActualWidth - Margin.Right, 0);
 
-			long row_index = _Manager.FirstVisibleIndex;
+			int row_index = _Manager.FirstVisibleIndex;
 			while (row_index <= _Manager.LastVisibleIndex)
 			{
 				RowManager.Row row = _Manager[row_index];
@@ -826,8 +814,6 @@ namespace Hexalyzer
 
 				row_index++;
 			}
-
-
 
 			// Let analyzer know some aspect may have changed
 			if (_IsAnalyzerActive)
@@ -880,7 +866,7 @@ namespace Hexalyzer
 				_CaretAnimTimer.Dispose();
 
 			// Setup new position
-			Point pos = _CharsToPixels(_MouseLeftPos, _MouseLeftScope);
+			Point pos = _OffsetToPixels(_MouseLeftPos, _MouseLeftScope);
 			if (pos != _CaretPos)
 			{
 				// Trigger changed event
@@ -984,32 +970,32 @@ namespace Hexalyzer
 
 		private void _ShowSelection()
 		{
-			if (_MouseLeftPos == _SelectionStart || _SelectionStart == null)
+			if (_MouseLeftPos == _SelectionStart || _SelectionStart < 0)
 				return;
 
-			Position start = _SelectionStart.Clone();
-			Position end   = _MouseLeftPos.Clone();
+			long start = _SelectionStart;
+			long end   = _MouseLeftPos;
 			if (start > end)
 			{
-				Position swap = start;
+				long swap = start;
 				start = end;
-				end = swap;
+				end   = swap;
 			}
 
-			Point start1 = _CharsToPixels(start, _MouseLeftScope);
-			Point end1   = _CharsToPixels(end  , _MouseLeftScope, false);
+			Point start1 = _OffsetToPixels(start, _MouseLeftScope);
+			Point end1   = _OffsetToPixels(end  , _MouseLeftScope, false);
 			end1.Y += RenderHelper.RowHeight;
 
 			Scope opposite = (_MouseLeftScope == Scope.Hex) ? Scope.Ascii : Scope.Hex;
-			Point start2 = _CharsToPixels(start, opposite);
-			Point end2   = _CharsToPixels(end  , opposite, false);
+			Point start2 = _OffsetToPixels(start, opposite);
+			Point end2   = _OffsetToPixels(end  , opposite, false);
 			end2.Y += RenderHelper.RowHeight;
 
 			Point start3 = new Point(TextColumn.Margin / 2, start1.Y);
 			Point end3   = new Point(_Columns[0].ActualWidth - TextColumn.Margin / 2, end1.Y);
 
 			Drawing selection1, selection2;
-			if (start.Row == end.Row)
+			if (start1.Y == end1.Y - RenderHelper.RowHeight)
 			{
 				// Selected target first
 				selection1 = ShapeProvider.CreateRect(start1, end1, Brushes.Aqua);
@@ -1044,7 +1030,7 @@ namespace Hexalyzer
 
 		private void _ClearSelection()
 		{
-			_SelectionStart = null;
+			_SelectionStart = -1;
 			_BackingStoreSelection.Children.Clear();
 
 			Selection = 0;
@@ -1059,22 +1045,22 @@ namespace Hexalyzer
 			if (column == null)
 				return;
 
-			long offset = _Manager.Offset(_MouseLeftPos.Row);
+			long offset = _MouseLeftPos;
 			ProjectNode node = _Project.FindNodeByOffset(offset);
 			if (node == null)
 				return;
 
-			long row = _Manager.FindRowByOffset(node.Offset) - _Manager.FirstVisibleIndex;
+			long row = _Manager.FindRowIndexByOffset(node.Offset) - _Manager.FirstVisibleIndex;
 			if (row < 0)
 				return;
 
 			_RemarkTextBox = new TextBox() {
 				Width = ActualWidth - column.Left - (2 * TextColumn.Margin),
-				Height = RenderHelper.RowHeight + 3,
+				Height = RenderHelper.RowHeight + 2,
 				Background = Brushes.Snow,
 				HorizontalAlignment = HorizontalAlignment.Left,
 				VerticalAlignment = VerticalAlignment.Top,
-				Margin = new Thickness(column.Left + TextColumn.Margin, RenderHelper.HeaderHeight + (row * RenderHelper.RowHeight) - 2, 0, 0),
+				Margin = new Thickness(column.Left + (TextColumn.Margin / 2), RenderHelper.HeaderHeight + (row * RenderHelper.RowHeight) - 3, 0, 0),
 				MaxLines = 1,
 				Tag = node,
 				Text = node.Remark,
@@ -1085,7 +1071,7 @@ namespace Hexalyzer
 				_Render();
 			};
 			_RemarkTextBox.KeyDown += (sender,args) => {
-				if (args.Key == Key.Enter)
+				if (args.Key == Key.Enter || args.Key == Key.Escape)
 				{
 					args.Handled = true;
 					_CloseRemarkTextbox();
@@ -1120,7 +1106,7 @@ namespace Hexalyzer
 			if (node == null)
 				return;
 
-			long row = _Manager.FindRowByOffset(node.Offset);
+			long row = _Manager.FindRowIndexByOffset(node.Offset);
 			if (row < 0)
 				return;
 
@@ -1235,11 +1221,11 @@ namespace Hexalyzer
 			Action<Analyzers.Finding, Brush> inject = (find, brush) => {
 				long ofs = find.NodeOffset + find.DataOffset;
 
-				long row = _Manager.FindRowByOffset(ofs, false) - first_vis;
+				long row = _Manager.FindRowIndexByOffset(ofs, false) - first_vis;
 				long col = ofs % Settings.BYTES_PER_ROW;
 				Position start = new Position((int)row, (int)col);
 
-				row = _Manager.FindRowByOffset(ofs + find.DataLength - 1, false) - first_vis;
+				row = _Manager.FindRowIndexByOffset(ofs + find.DataLength - 1, false) - first_vis;
 				col = (ofs + find.DataLength - 1) % Settings.BYTES_PER_ROW;
 				Position end = new Position((int)row, (int)col);
 
@@ -1393,14 +1379,6 @@ namespace Hexalyzer
 		}
 
 
-		private long _CharsToOffset(Position chars, bool as_start = true)
-		{
-			long offset = (_Manager.Offset(chars.Row) & Settings.OFFSET_MASK) + chars.Col;
-			if (!as_start)
-				offset--;
-			return offset;
-		}
-
 		private Scope _PixelsToChars(Point pixels, out Position chars)
 		{
 			return _PixelsToChars(pixels, true, out chars);
@@ -1436,6 +1414,13 @@ namespace Hexalyzer
 			return column.CharsToPixels(chars, as_start);
 		}
 
+		private Point _OffsetToPixels(long offset, Scope target, bool as_start = true)
+		{
+			Position pos = _Manager.OffsetToChars(offset, as_start);
+			return _CharsToPixels(pos, target, as_start);
+		}
+
+
 		private TextColumn _GetColumn(Point pixels)
 		{
 			return _Columns.FirstOrDefault(c => {
@@ -1465,7 +1450,7 @@ namespace Hexalyzer
 				x += col.Update(x);
 
 			if (_IsCaretVisible != null)
-				_CaretPos = _CharsToPixels(_MouseLeftPos, _MouseLeftScope);
+				_CaretPos = _OffsetToPixels(_MouseLeftPos, _MouseLeftScope);
 		}
 
 
@@ -1476,11 +1461,11 @@ namespace Hexalyzer
 		private DrawingGroup _BackingStoreContent = new DrawingGroup();
 		private Stopwatch _RenderStopWatch;
 
-		private Position _MouseLeftPos;
+		private long _MouseLeftPos;
 		private Scope _MouseLeftScope;
 
 		private DrawingGroup _BackingStoreSelection = new DrawingGroup();
-		private Position _SelectionStart;
+		private long _SelectionStart;
 
 		private DrawingGroup _BackingStoreHovering = new DrawingGroup();
 		private Drawing _RowHoverRect;
@@ -1607,7 +1592,7 @@ namespace Hexalyzer
 	/// </summary>
 	internal class RowManager
 	{
-		internal long TotalRows
+		internal int TotalRows
 		{
 			get
 			{
@@ -1615,7 +1600,7 @@ namespace Hexalyzer
 			}
 		}
 
-		internal long VisibleRows
+		internal int VisibleRows
 		{
 			get { return _VisibleRows; }
 			set
@@ -1629,7 +1614,7 @@ namespace Hexalyzer
 			}
 		}
 
-		internal long FirstVisibleIndex
+		internal int FirstVisibleIndex
 		{
 			get { return _FirstVisible; }
 			set
@@ -1654,13 +1639,13 @@ namespace Hexalyzer
 			}
 		}
 
-		internal long LastVisibleIndex
+		internal int LastVisibleIndex
 		{
 			get
 			{
 				if (_FirstVisible < 0)
 					return -1;
-				long last = _FirstVisible + VisibleRows - 1;
+				int last = _FirstVisible + VisibleRows - 1;
 				if (last >= TotalRows)
 					last = TotalRows - 1;
 				return last;
@@ -1671,24 +1656,24 @@ namespace Hexalyzer
 		{
 			get
 			{
-				long last = LastVisibleIndex;
+				int last = LastVisibleIndex;
 				if (last < 0)
 					return null;
 				return this[last];
 			}
 		}
 
-		internal Row this[long row]
+		internal Row this[int row]
 		{
 			get
 			{
 				if (row < 0 || row >= TotalRows)
 					return null;
-				return _Rows[(int)row];
+				return _Rows[row];
 			}
 		}
 
-		internal long Offset(long row)
+		internal long Offset(int row)
 		{
 			Row r = this[_FirstVisible + row];
 			return (r != null) ? r.Offset : -1;
@@ -1726,7 +1711,7 @@ namespace Hexalyzer
 					if (length > remain)
 						length = remain;
 
-					_Rows.Add(new Row(node, offset, length, (length == remain)));
+					_Rows.Add(new Row(node, offset, (int)length, (length == remain)));
 
 					offset += length;
 					remain -= length;
@@ -1767,7 +1752,7 @@ namespace Hexalyzer
 					if (length > remain)
 						length = remain;
 
-					_Rows.Insert(index, new Row(node, offset, length, (length == remain)));
+					_Rows.Insert(index, new Row(node, offset, (int)length, (length == remain)));
 					index++;
 
 					offset += length;
@@ -1803,7 +1788,7 @@ namespace Hexalyzer
 				if (length > remain)
 					length = remain;
 
-				_Rows.Insert(index, new Row(added, offset, length, (length == remain)));
+				_Rows.Insert(index, new Row(added, offset, (int)length, (length == remain)));
 				index++;
 
 				offset += length;
@@ -1817,15 +1802,15 @@ namespace Hexalyzer
 
 		internal void MoveToOffset(long offset)
 		{
-			long row = FindRowByOffset(offset, true);
+			int row = FindRowIndexByOffset(offset, true);
 			if (row == -1)
-				row = FindRowByOffset(offset, false);
+				row = FindRowIndexByOffset(offset, false);
 			FirstVisibleIndex = row;
 		}
 
-		internal long MoveBy(long row_delta)
+		internal long MoveBy(int row_delta)
 		{
-			long row = _FirstVisible + row_delta;
+			int row = _FirstVisible + row_delta;
 
 			if (row < 0)
 				row = 0;
@@ -1838,9 +1823,9 @@ namespace Hexalyzer
 		}
 
 
-		internal long FindRowByOffset(long offset, bool exact = true)
+		internal int FindRowIndexByOffset(long offset, bool exact = true)
 		{
-			long row = 0;
+			int row = 0;
 
 			foreach (Row info in _Rows)
 			{
@@ -1857,6 +1842,62 @@ namespace Hexalyzer
 			return row;
 		}
 
+		internal Row FindRowByOffset(long offset, bool exact = true)
+		{
+			return this[FindRowIndexByOffset(offset, exact)];
+		}
+
+
+		internal Position OffsetToChars(long offset, bool as_start = true)
+		{
+			int row_index = FindRowIndexByOffset(offset, false);
+			//if (row_index < _FirstVisible)
+			if (row_index < 0)
+					return null;
+
+			Row row = this[row_index];
+			if (row == null)
+				return null;
+
+			//int col = (int)(offset - row.Offset);
+			int col = (int)(offset % Settings.BYTES_PER_ROW);
+			if (!as_start)
+			{
+				col--;
+				if (col < 0)
+				{
+					row_index--;
+					row = this[row_index];
+					if (row == null)
+						return null;
+				}
+			}
+			if (col < row.StartCol)
+				col = row.StartCol;
+			else if (col > row.EndCol)
+				col = row.EndCol;
+
+			return new Position(row_index - _FirstVisible, col);
+		}
+
+		internal long CharsToOffset(Position chars, bool as_start = true)
+		{
+			long offset = -1;
+			if (chars != null)
+			{
+				offset = Offset(chars.Row);
+				if (offset >= 0 && chars.Col >= 0)
+				{
+					// Incorporate column into offset
+					offset &= Settings.OFFSET_MASK;
+					offset += chars.Col;
+				}
+				if (!as_start)
+					offset--;
+			}
+			return offset;
+		}
+
 
 		internal class Row
 		{
@@ -1864,16 +1905,16 @@ namespace Hexalyzer
 
 			internal long Offset { get; private set; }
 
-			internal long Length { get; private set; }
+			internal int Length { get; private set; }
 
 			internal bool Last { get; private set; }
 
-			internal long StartCol { get { return Offset % Settings.BYTES_PER_ROW; } }
+			internal int StartCol { get { return (int)(Offset % Settings.BYTES_PER_ROW); } }
 
-			internal long EndCol { get { return StartCol + Length - 1; } }
+			internal int EndCol { get { return (int)(StartCol + Length - 1); } }
 
 
-			internal Row(ProjectNode node, long offset, long length, bool last)
+			internal Row(ProjectNode node, long offset, int length, bool last)
 			{
 				Node = node;
 				Offset = offset;
@@ -1896,8 +1937,8 @@ namespace Hexalyzer
 
 		private ScrollBar _Scrollbar;
 		private List<Row> _Rows;
-		private long _FirstVisible;
-		private long _VisibleRows;
+		private int _FirstVisible;
+		private int _VisibleRows;
 
 	}
 

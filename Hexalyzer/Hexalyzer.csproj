@@ -71,6 +71,7 @@
     <Compile Include="Dialogs\ShowHtmlResDialog.xaml.cs">
       <DependentUpon>ShowHtmlResDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Helper\Analyzer.cs" />
     <Compile Include="Helper\DataBuffer.cs" />
     <Compile Include="Helper\Formatters.cs" />
     <Compile Include="Tools\ProjectViewInfo.cs" />

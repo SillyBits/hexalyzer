@@ -15,6 +15,12 @@ using System.Windows.Media;
 /*
  * TODO:
  * 
+ * - API for tools.
+ * 
+ * - API for views.
+ * 
+ * - API for user-defined types (incl. combined ones).
+ * 
  */
 
 

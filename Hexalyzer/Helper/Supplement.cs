@@ -81,8 +81,8 @@ namespace Hexalyzer
 	/// </summary>
 	public class Position
 	{
-		public long Row;
-		public long Col;
+		public int Row;
+		public int Col;
 
 
 		public Position(int row, int col)
@@ -100,10 +100,10 @@ namespace Hexalyzer
 		/// <summary>
 		/// Return new Position instance for given character-based position
 		/// </summary>
-		/// <param name="chars">Character position</param>
+		/// <param name="offset">Character position</param>
 		/// <param name="is_start">If true, position given is start, else end of a selection</param>
 		/// <param name="source">Source scope for offset passed in</param>
-		public Position(long chars, bool is_start, Scope source)
+		public Position(long offset, bool is_start, Scope source)
 		{
 			//int line, byteno;
 			long ofs;
@@ -112,25 +112,25 @@ namespace Hexalyzer
 			{
 				case Scope.Hex:
 
-					Row = chars / Settings.CHARS_PER_ROW;
+					Row = (int)(offset / Settings.CHARS_PER_ROW);
 
-					ofs = chars % Settings.CHARS_PER_ROW;
+					ofs = offset % Settings.CHARS_PER_ROW;
 					long col = ofs / (Settings.CHARS_PER_COL + Settings.COL_SEP_CHARS);
 					ofs -= col * (Settings.CHARS_PER_COL + Settings.COL_SEP_CHARS);
 					//if(!is_start)
 					//	ofs = ((ofs + 2) / 3) * 3;
-					Col = (ofs / 3) + (col * Settings.BYTES_PER_COL);
+					Col = (int)((ofs / 3) + (col * Settings.BYTES_PER_COL));
 
 					break;
 
 				case Scope.Ascii:
 
 					if (!is_start)
-						--chars;
+						--offset;
 
-					Row = chars / Settings.BYTES_PER_ROW;
+					Row = (int)(offset / Settings.BYTES_PER_ROW);
 
-					Col = chars % Settings.BYTES_PER_ROW;
+					Col = (int)(offset % Settings.BYTES_PER_ROW);
 					if (!is_start && Col >= Settings.BYTES_PER_ROW)
 						--Col;
 
@@ -139,11 +139,11 @@ namespace Hexalyzer
 				case Scope.Data:
 
 					if (!is_start)
-						--chars;
+						--offset;
 
-					Row = chars / Settings.BYTES_PER_ROW;
+					Row = (int)(offset / Settings.BYTES_PER_ROW);
 
-					Col = chars % Settings.BYTES_PER_ROW;
+					Col = (int)(offset % Settings.BYTES_PER_ROW);
 
 					if (!is_start && Col == 0)
 					{

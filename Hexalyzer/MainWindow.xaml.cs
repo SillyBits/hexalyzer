@@ -62,6 +62,8 @@ namespace Hexalyzer
 
 			PrjView.OffsetChanged += PrjView_OffsetChanged;
 			PrjView.SelectionChanged += PrjView_SelectionChanged;
+
+			Plugin.PluginHandler.Load();
 		}
 
 		public void UpdateUI()
@@ -240,6 +242,8 @@ namespace Hexalyzer
 			AddCustomView("View_DataBufferInfo", "Data buffer info", "Toolbar.View.DataBufferInfo.png", View_DataBufferInfo);
 			AddCustomView("View_ProjectViewInfo", "Project view info", "Toolbar.View.ProjectViewInfo.png", View_ProjectViewInfo);
 #endif
+
+			Plugin.PluginHandler.AddToUI(this);
 		}
 
 		protected override void OnClosing(CancelEventArgs e)

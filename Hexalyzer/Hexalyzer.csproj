@@ -74,6 +74,8 @@
     <Compile Include="Helper\Analyzer.cs" />
     <Compile Include="Helper\DataBuffer.cs" />
     <Compile Include="Helper\Formatters.cs" />
+    <Compile Include="Plugin\Interfaces.cs" />
+    <Compile Include="Plugin\PluginHandler.cs" />
     <Compile Include="Tools\ProjectViewInfo.cs" />
     <Compile Include="Tools\ValuePreview.cs" />
     <Compile Include="Tools\DataBufferInfo.cs" />

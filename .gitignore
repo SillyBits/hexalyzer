@@ -1,6 +1,7 @@
 __unused
 __releases
 __internal
+__plugins
 
 logs
 *.log

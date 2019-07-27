@@ -1295,7 +1295,7 @@ namespace Hexalyzer
 
 				while (offset <= end_offset)
 				{
-					if (_AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
+					if (_Project == null || _AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 						break;
 
 					if (offset >= node.Offset + node.Length)
@@ -1317,9 +1317,7 @@ namespace Hexalyzer
 						data = node.Data;
 					}
 
-					if (_AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
-						break;
-					if (_Project == null)
+					if (_Project == null || _AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 						break;
 
 					// Filesize checking
@@ -1339,7 +1337,7 @@ namespace Hexalyzer
 						finding.NodeOffset = node.Offset;
 						inject(finding, Brushes.Beige);
 					}
-					if (_AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
+					if (_Project == null || _AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 						break;
 
 					offset++;
@@ -1347,7 +1345,7 @@ namespace Hexalyzer
 						Thread.Yield();
 				}
 
-				if (_AnalyzerThreadStopped)
+				if (_Project == null || _AnalyzerThreadStopped)
 					break;
 
 				if (!_AnalyzerCancelWork.WaitOne(0))
@@ -1356,7 +1354,7 @@ namespace Hexalyzer
 						DrawingContext dc = _BackingStoreAnalyzer.Open();
 						foreach (Drawing d in findings)
 						{
-							if (_AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
+							if (_Project == null || _AnalyzerThreadStopped || _AnalyzerCancelWork.WaitOne(0))
 								break;
 							dc.DrawDrawing(d);
 						}

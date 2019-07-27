@@ -2,10 +2,12 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 
@@ -111,36 +113,132 @@ namespace Hexalyzer
 		}
 
 
+		#region UI customizers
+		public void AddCustomDatatype(string name, string title, string icon, RoutedEventHandler handler, bool add_separator = false)
+		{
+			AddCustomEntry(Resource_Menu, Resource_ToolBar, name, title, icon, false, handler, add_separator);
+		}
+
+		public void AddCustomView(string name, string title, string icon, RoutedEventHandler handler, bool add_separator = false)
+		{
+			AddCustomEntry(View_Menu, View_ToolBar, name, title, icon, true, handler, add_separator);
+		}
+
+		public void AddCustomTool(string name, string title, string icon, RoutedEventHandler handler, bool add_separator = false)
+		{
+			AddCustomEntry(Tools_Menu, Tools_ToolBar, name, title, icon, false/*???*/, handler, add_separator);
+		}
+
+		public void AddCustomEntry(MenuItem menu, ToolBar toolbar, string name, string title, string icon, bool checkable, 
+			RoutedEventHandler handler, bool add_separator)
+		{
+			BitmapImage img = null;
+			if (!string.IsNullOrEmpty(icon))
+			{
+				img = new BitmapImage(new Uri("pack://application:,,,/Resources/" + icon));
+				img.Freeze();
+			}
+
+			AddCustomEntry(menu, toolbar, name, title, img, checkable, handler, add_separator);
+		}
+
+		public void AddCustomEntry(MenuItem menu, ToolBar toolbar, string name, string title, ImageSource icon, bool checkable,
+			RoutedEventHandler handler, bool add_separator)
+		{
+			if (menu != null)
+				AddCustomMenuItem(menu, name, title, icon, checkable, handler, add_separator);
+
+			if (toolbar != null)
+				AddCustomToolbarButton(toolbar, name, title, icon, checkable, handler, add_separator);
+		}
+
+		public MenuItem AddCustomMenuItem(MenuItem menu, string name, string title, ImageSource icon, bool checkable,
+			RoutedEventHandler handler, bool add_separator)
+		{
+			if (add_separator)
+				menu.Items.Add(new Separator());
+
+			MenuItem menuitem = new MenuItem() {
+				Name = name + "_Menu",
+				Header = title,
+				IsCheckable = checkable,
+			};
+
+			if (icon != null)
+				menuitem.Icon = new Image() { Source = icon };
+
+			if (handler != null)
+				menuitem.Click += handler;
+
+			menu.Items.Add(menuitem);
+			
+			return menuitem;
+		}
+
+		
+		public ToolBar AddCustomToolbar(string name)
+		{
+			int index = toolbars.ToolBars
+				.Where(tb => tb.Band==2)
+				.Select(tb => tb.BandIndex)
+				.Max()
+				;
+
+			ToolBar toolbar = new ToolBar() {
+				Band = 2,
+				BandIndex = index + 1,
+			};
+
+			toolbars.ToolBars.Add(toolbar);
+
+			return toolbar;
+		}
+
+		public ContentControl AddCustomToolbarButton(ToolBar toolbar, string name, string title, ImageSource icon, bool checkable,
+			RoutedEventHandler handler, bool add_separator)
+		{
+			if (add_separator)
+				toolbar.Items.Add(new Separator());
+
+			ButtonBase button;
+			if (checkable)
+			{
+				button = new ToggleButton() {
+					Name = name + "_TB",
+					ToolTip = title,
+					IsThreeState = false,
+					IsEnabled = true,
+				};
+			}
+			else
+			{
+				button = new Button() {
+					Name = name + "_TB",
+					ToolTip = title,
+				};
+			}
+
+			if (icon != null)
+				button.Content = new Image() { Source = icon };
+
+			if (handler != null)
+				button.Click += handler;
+
+			toolbar.Items.Add(button);
+
+			return button;
+		}
+		#endregion
+
+
 		// Non-public members following
 		//
 
 		private void _Loaded(object sender, EventArgs e)
 		{
 #if DEVENV
-			Action<string,string,string,RoutedEventHandler> create = (name,header,icon,handler) => {
-				BitmapImage img = new BitmapImage(new Uri("pack://application:,,,/Resources/" + icon));
-
-				MenuItem menu = new MenuItem() {
-					Name = name + "_Menu",
-					Header = header,
-					IsCheckable = true,
-					Icon = new Image() { Source = img },
-				};
-				menu.Click += handler;
-				View_Menu.Items.Add(menu);
-
-				ToggleButton button = new ToggleButton() {
-					Name = name + "_TB",
-					ToolTip = header,
-					IsThreeState = false,
-					Content = new Image() { Source = img },
-				};
-				button.Click += handler;
-				View_ToolBar.Items.Add(button);
-			};
-
-			create("View_DataBufferInfo", "Data buffer info", "Toolbar.View.DataBufferInfo.png", View_DataBufferInfo);
-			create("View_ProjectViewInfo", "Project view info", "Toolbar.View.ProjectViewInfo.png", View_ProjectViewInfo);
+			AddCustomView("View_DataBufferInfo", "Data buffer info", "Toolbar.View.DataBufferInfo.png", View_DataBufferInfo);
+			AddCustomView("View_ProjectViewInfo", "Project view info", "Toolbar.View.ProjectViewInfo.png", View_ProjectViewInfo);
 #endif
 		}
 

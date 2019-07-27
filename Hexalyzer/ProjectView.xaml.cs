@@ -2256,6 +2256,10 @@ namespace Hexalyzer
 						chars = new Position(offset, true, source);
 						break;
 
+					case Scope.Remark:
+						chars = new Position(row, -1);
+						break;
+
 					default:
 						chars = new Position(row, col);
 						break;

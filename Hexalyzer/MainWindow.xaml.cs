@@ -180,11 +180,16 @@ namespace Hexalyzer
 		
 		public ToolBar AddCustomToolbar(string name)
 		{
-			int index = toolbars.ToolBars
+			int index = 0;
+			var band_2 = toolbars
+				.ToolBars
 				.Where(tb => tb.Band==2)
-				.Select(tb => tb.BandIndex)
-				.Max()
 				;
+			if (band_2.Count() > 0)
+				index = band_2
+					.Select(tb => tb.BandIndex)
+					.Max()
+					;
 
 			ToolBar toolbar = new ToolBar() {
 				Band = 2,

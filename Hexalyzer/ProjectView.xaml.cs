@@ -2054,91 +2054,180 @@ namespace Hexalyzer
 			}
 		}
 
+
 		internal static Finding CheckFilesizeCandidate(IReadOnlyList<byte> data, long offset, long filesize)
 		{
-			int len = 0;
+			// Check most common type first: 32bit (u)int
+			Type type;
 
-			while (true)
-			{
-				if (offset + 4 <= data.Count)
-				{
-					len = 4;
-					uint u32 = Datatypes.Helpers.ToUInt32(data, (int)offset);
-					if (u32 == filesize)
-						break;
-				}
+			type = IsOfValue(data, offset, filesize, 4, 4, 0);
+			if (type != null)
+				return new Finding(type, offset, 4);
 
-				if (offset + 8 <= data.Count)
-				{
-					len = 8;
-					ulong u64 = Datatypes.Helpers.ToUInt64(data, (int)offset);
-					if (u64 == (ulong)filesize)
-						break;
-				}
+			type = IsOfValue(data, offset, filesize, 8, 8, 0);
+			if (type != null)
+				return new Finding(type, offset, 8);
 
-				return null;
-			}
+			type = IsOfValue(data, offset, filesize, 2, 2, 0);
+			if (type != null)
+				return new Finding(type, offset, 2);
 
-			return new Finding((len == 4) ? typeof(uint) : typeof(ulong), offset, len);
+			return null;
 		}
 
 		internal static Finding CheckStringCandidate(IReadOnlyList<byte> data, long offset)
 		{
-			bool hit = false;
-			int len = 0;
+			if (offset + 4 > data.Count)
+				return null;
 
-			if (offset + 4 <= data.Count)
+			int len = Helpers.ToInt32(data, (int)offset);
+			if (len == 0)
+				return null;
+
+			long ofs = offset + 4;
+
+			if (len < 0)
 			{
-				len = Datatypes.Helpers.ToInt32(data, (int)offset);
-				if (len < 0)
+				len = -len;
+				return IsWideString(data, ofs, len)
+					? new Finding(typeof(VarString), offset, (len * 2) + 4)
+					: null
+					;
+			}
+			if (IsAsciiString(data, ofs, len))
+				return new Finding(typeof(AsciiString), offset, len + 4);
+
+			if (IsWideString(data, ofs, len))
+				return new Finding(typeof(WideString), offset, (len * 2) + 4);
+
+			return null;
+		}
+
+
+		// More general tests following
+		//
+
+		/// <summary>
+		/// Test data buffer against a specific value
+		/// </summary>
+		/// <param name="data">Data to check</param>
+		/// <param name="offset">Where to start in data</param>
+		/// <param name="value">Specific value to look for</param>
+		/// <param name="minlen">Minimum length of check (default=1)</param>
+		/// <param name="maxlen">Maximum length of check (default=8)</param>
+		/// <param name="sign">Which type to check: -1:signed, 0:both, +1:unsigned</param>
+		/// <returns>Type discovered, or null if no match found</returns>
+		internal static Type IsOfValue(IReadOnlyList<byte> data, long offset, long value, int minlen = 1, int maxlen = 8, int sign = 0)
+		{
+			if (minlen <= 8 && maxlen >= 8 && offset + 8 <= data.Count)
+			{
+				if (sign >= 0 && Helpers.ToUInt64(data, (int)offset) == (ulong)value)
+					return typeof(ulong);
+
+				if (sign <= 0 && Helpers.ToInt64(data, (int)offset) == value)
+					return typeof(long);
+			}
+
+			if (minlen <= 4 && maxlen >= 4 && value <= uint.MaxValue && offset + 4 <= data.Count)
+			{
+				if (sign >= 0 && Helpers.ToUInt32(data, (int)offset) == value)
+					return typeof(uint);
+
+				if (sign <= 0 && value <= int.MaxValue)
+					if (Helpers.ToInt32(data, (int)offset) == value)
+						return typeof(int);
+			}
+
+			if (minlen <= 2 && maxlen >= 2 && value < ushort.MaxValue && offset + 2 <= data.Count)
+			{
+				if (sign >= 0 && Helpers.ToUInt16(data, (int)offset) == value)
+					return typeof(ushort);
+
+				if (sign <= 0 && value <= short.MaxValue)
+					if (Helpers.ToInt16(data, (int)offset) == value)
+						return typeof(short);
+			}
+
+			if (maxlen >= 1 && value < byte.MaxValue && offset + 1 <= data.Count)
+			{
+				if (sign >= 0 && Helpers.ToByte(data, (int)offset) == value)
+					return typeof(byte);
+
+				if (sign <= 0 && value <= sbyte.MaxValue)
+					if (Helpers.ToSByte(data, (int)offset) == value)
+						return typeof(sbyte);
+			}
+
+			return null;
+		}
+
+		/// <summary>
+		/// Check for valid 8bit string
+		/// </summary>
+		/// <param name="data">Data to check</param>
+		/// <param name="offset">Where to start in data</param>
+		/// <param name="length">Assumed length of string</param>
+		/// <returns>Outcome</returns>
+		internal static bool IsAsciiString(IReadOnlyList<byte> data, long offset, long length)
+		{
+			if (offset + length > data.Count)
+				return false;
+
+			// Null-terminator present?
+			if (data[(int)(offset + length - 1)] != 0)
+				return false;
+
+			for (long idx = offset; idx < offset + length - 1; ++idx)
+			{
+				byte b = data[(int)idx];
+
+				if (b > 127)
+					return false;
+				if (b < 32 && !_ValidCtrlChars.Contains(b))
+					return false;
+			}
+
+			return true;
+		}
+
+		/// <summary>
+		/// Check for valid 16bit string
+		/// </summary>
+		/// <param name="data">Data to check</param>
+		/// <param name="offset">Where to start in data</param>
+		/// <param name="length">Assumed length of string</param>
+		/// <returns>Outcome</returns>
+		internal static bool IsWideString(IReadOnlyList<byte> data, long offset, long length)
+		{
+			long len2 = length << 1;
+
+			if (offset + len2 > data.Count)
+				return false;
+
+			// Null-terminator present?
+			if (data[(int)(offset + len2 - 2)] != 0 || data[(int)(offset + len2 - 1)] != 0) 
+				return false;
+
+			for (long idx = offset; idx < offset + len2 - 2; idx += 2)
+			{
+				byte b1 = data[(int) idx     ];
+				byte b2 = data[(int)(idx + 1)];
+
+				if (b1 < 128)
 				{
-					// Check unicode
-					len = (-len) * 2;
-					if (len > 0 && offset + 4 + len <= data.Count)
-					{
-						hit = true;
-						for (long idx = offset + 4; idx < offset + 4 + len - 3; idx += 2)
-						{
-							//TODO: Implement better unicode testing
-							if (data[(int)idx] == 0 || data[(int)(idx + 1)] != 0)
-							{
-								hit = false;
-								break;
-							}
-						}
-						if (hit)
-						{
-							hit = (data[(int)(offset + 4 + len - 1)] == 0) 
-								&& (data[(int)(offset + 4 + len)] == 0);
-						}
-					}
+					if (b2 != 0)
+						return false;
+					if (b1 < 32 && !_ValidCtrlChars.Contains(b1))
+						return false;
 				}
-				else if (len > 0)
+				else if (0xC2 <= b1 && b1 <= 0xDF)
 				{
-					// Check ascii
-					if (offset + 4 + len <= data.Count)
-					{
-						hit = true;
-						for (long idx = offset + 4; idx < offset + 4 + len - 1; ++idx)
-						{
-							//TODO: Valid to assume pure 7bit here?
-							if ((data[(int)idx] < 32 && !_ValidCtrlChars.Contains(data[(int)idx])) || data[(int)idx] > 127)
-							{
-								hit = false;
-								break;
-							}
-						}
-						if (hit)
-							hit = (data[(int)(offset + 4 + len - 1)] == 0);
-					}
+					if (b2 < 0x80 || b2 > 0xBF)
+						return false;
 				}
 			}
 
-			if (!hit)
-				return null;
-
-			len += 4;
-			return new Finding(typeof(Datatypes.VarString), offset, len);
+			return true;
 		}
 
 		private static byte[] _ValidCtrlChars = new byte[] { (byte)'\t', (byte)'\n', (byte)'\r' };

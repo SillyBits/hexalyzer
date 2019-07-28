@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace Hexalyzer
 {
 
@@ -96,27 +97,14 @@ namespace Hexalyzer
 		/// </summary>
 		/// <param name="index">0-based index of object to access</param>
 		/// <param name="count">Number of objects to return</param>
-		/// <returns>Container with count object instances</returns>
-		//public abstract _Container this[long index, int count] { get; }
-		public virtual IReadOnlyList<_Type> this[long index, long count]
+		/// <returns>IAccessor instance</returns>
+		public virtual IAccessor<_Type> this[long index, long count]
 		{
-			get
-			{
-				if (count > 0x7FFFFFFF)
-				{
-					Debug.WriteLine(string.Format("Indexer is NOT capable of returning a {0} bytes!\nAdvised to cast to 'Accessor' explicitely.", count));
-					return null;
-				}
-				return new Accessor(this, index, count);
-			}
+			get { return new Accessor(this, index, count); }
 		}
 
 
-		// Non-public implementation following
-		//
-
-
-		public class Accessor : IReadOnlyList<_Type>
+		public class Accessor : IAccessor<_Type>
 		{
 			public _Type this[long index] { get { return Parent[index + Offset]; } }
 
@@ -188,6 +176,10 @@ namespace Hexalyzer
 			}
 
 		}
+
+
+		// Non-public implementation following
+		//
 
 
 		/// <summary>

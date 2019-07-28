@@ -17,11 +17,6 @@ namespace Hexalyzer.Datatypes
 			Value = null;
 		}
 
-		public AsciiChar(AsciiChar val)
-		{
-			Value = val.Value;
-		}
-
 		public AsciiChar(char val)
 		{
 			Value = val;
@@ -50,11 +45,6 @@ namespace Hexalyzer.Datatypes
 		public AsciiString()
 		{
 			Value = null;
-		}
-
-		public AsciiString(AsciiString val)
-		{
-			Value = val.Value;
 		}
 
 		public AsciiString(string val)
@@ -116,11 +106,6 @@ namespace Hexalyzer.Datatypes
 			Value = null;
 		}
 
-		public WideString(WideString val)
-		{
-			Value = val.Value;
-		}
-
 		public WideString(string val)
 		{
 			Value = val;
@@ -179,11 +164,6 @@ namespace Hexalyzer.Datatypes
 		public VarString()
 		{
 			Value = null;
-		}
-
-		public VarString(VarString val)
-		{
-			Value = val.Value;
 		}
 
 		public VarString(string val)

@@ -36,9 +36,9 @@ namespace Hexalyzer.Plugin
 
 		// Sadfully, no static methods allowed, so one has to use a fake instance to access those :(
 		IDatatype Empty { get; }
-		bool IsValid(IReadOnlyList<byte> data, long offset);
-		long LengthOf(IReadOnlyList<byte> data, long offset);
-		IDatatype FromData(IReadOnlyList<byte> data, long offset);
+		bool IsValid(IAccessor<byte> data, long offset);
+		long LengthOf(IAccessor<byte> data, long offset);
+		IDatatype FromData(IAccessor<byte> data, long offset);
 
 	}
 

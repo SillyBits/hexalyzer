@@ -108,6 +108,8 @@ namespace Hexalyzer
 		{
 			public _Type this[long index] { get { return Parent[index + Offset]; } }
 
+			public IAccessor<_Type> this[long index, long count] { get { return new Accessor(Parent, index, count); } }
+
 			public long LongCount { get { return Length; } }
 
 
@@ -116,7 +118,15 @@ namespace Hexalyzer
 
 			public _Type this[int index] { get { return Parent[index + Offset]; } }
 
-			public int Count { get { return (int)Length; } }
+			public int Count
+			{
+				get
+				{
+					if (Length > int.MaxValue)
+						Debug.WriteLine("Indexed access using int with Length > INT_MAX, advised to migrate to .LongCount instead");
+					return (int)Length;
+				}
+			}
 
 			public IEnumerator<_Type> GetEnumerator()
 			{

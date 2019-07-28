@@ -257,4 +257,15 @@ namespace Hexalyzer
 		}
 	}*/
 
+
+	/// <summary>
+	/// Extension to IReadOnlyList to allow for long indexer
+	/// </summary>
+	/// <typeparam name="_Type">Type this class represents</typeparam>
+	public interface IAccessor<_Type> : IReadOnlyList<_Type>
+	{
+		_Type this[long index] { get; }
+		long LongCount { get; }
+	}
+
 }

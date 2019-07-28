@@ -264,8 +264,29 @@ namespace Hexalyzer
 	/// <typeparam name="_Type">Type this class represents</typeparam>
 	public interface IAccessor<_Type> : IReadOnlyList<_Type>
 	{
+
+		/// <summary>
+		/// Long indexer
+		/// </summary>
+		/// <param name="index">Index to access</param>
+		/// <returns>Value at given index</returns>
 		_Type this[long index] { get; }
+
+		/// <summary>
+		/// Create shifted sub-accessor. 
+		/// Meant to be used with methods which are capable of handling only
+		/// int-based IReadOnlyList, e.g. those .net string encoders.
+		/// </summary>
+		/// <param name="index">Where to start this shifted accessor</param>
+		/// <param name="count">Number of elements this accessor should serve</param>
+		/// <returns>IAccessor instance</returns>
+		IAccessor<_Type> this[long index, long count] { get; }
+
+		/// <summary>
+		/// Long count
+		/// </summary>
 		long LongCount { get; }
+
 	}
 
 }

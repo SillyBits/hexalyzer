@@ -1282,7 +1282,7 @@ namespace Hexalyzer
 				first_vis = _Manager.FirstVisibleIndex;
 				long start_offset = _Manager.FirstVisibleRow.Offset;
 				long end_offset = _Manager.LastVisibleRow.Offset + _Manager.LastVisibleRow.Length - 1;
-				IReadOnlyList<byte> data = node.Data;
+				IAccessor<byte> data = node.Data;
 
 				// Take a snapshot on node offets (all excl. first node at 0)
 				List<long> offsets = _Project.Nodes.Select(n => n.Offset).ToList();
@@ -2082,7 +2082,7 @@ namespace Hexalyzer
 	internal static class PrivateAnalyzers
 	{
 
-		internal static Analyzers.Finding CheckFilesizeCandidate(IReadOnlyList<byte> data, long offset, long filesize)
+		internal static Analyzers.Finding CheckFilesizeCandidate(IAccessor<byte> data, long offset, long filesize)
 		{
 			// Check most common type first: 32bit (u)int
 			Type type;
@@ -2102,12 +2102,12 @@ namespace Hexalyzer
 			return null;
 		}
 
-		internal static Analyzers.Finding CheckStringCandidate(IReadOnlyList<byte> data, long offset)
+		internal static Analyzers.Finding CheckStringCandidate(IAccessor<byte> data, long offset)
 		{
-			if (offset + 4 > data.Count)
+			if (offset + 4 > data.LongCount)
 				return null;
 
-			int len = Helpers.ToInt32(data, (int)offset);
+			int len = Helpers.ToInt32(data, offset);
 			if (len == 0)
 				return null;
 

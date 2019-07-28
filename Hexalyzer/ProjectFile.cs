@@ -283,7 +283,7 @@ namespace Hexalyzer
 				if (type != null)
 				{
 					//byte[] data = node[0, node.Length];
-					IReadOnlyList<byte> data = node[0, node.Length];
+					IAccessor<byte> data = node[0, node.Length];
 					length = Datatypes.Helpers.LengthOf(type, data, offset);
 				}
 				else
@@ -656,36 +656,18 @@ namespace Hexalyzer
 		/// </summary>
 		/// <param name="index">Index to access</param>
 		/// <param name="count">Number of values to return</param>
-		/// <returns>Container with count values</returns>
-		public IReadOnlyList<byte> this[long index, long count]
+		/// <returns>IAccessor instance</returns>
+		public IAccessor<byte> this[long index, long count]
 		{
-			get
-			{
-				//TODO: If requested [0,Len) -> Create short-time buffer to serve from
-				//      (don't forget that underlying buffer must serve this from multiple pages!)
-				if (count > 0x7FFFFFFF)
-				{
-					Debug.Fail(string.Format("Indexer is NOT capable of returning a {0} bytes!", count));
-					return null;
-				}
-				return Parent._DataBuffer[index + Offset, (int)count];
-			}
+			get { return Parent._DataBuffer[index + Offset, (int)count]; }
 		}
 
 		/// <summary>
 		/// Get all data, shortcut for this[0, Length]
 		/// </summary>
-		public IReadOnlyList<byte> Data
+		public IAccessor<byte> Data
 		{
-			get
-			{
-				if (Length > 0x7FFFFFFF)
-				{
-					Debug.Fail(string.Format("'Data' member is NOT capable of returning a {0} bytes!", Length));
-					return null;
-				}
-				return this[0, (int)Length];
-			}
+			get { return this[0, (int)Length]; }
 		}
 
 		/// <summary>

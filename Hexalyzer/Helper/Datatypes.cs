@@ -27,12 +27,12 @@ namespace Hexalyzer.Datatypes
 			Value = val;
 		}
 
-		public static AsciiChar FromData(IReadOnlyList<byte> data, long offset = 0)
+		public static AsciiChar FromData(IAccessor<byte> data, long offset = 0)
 		{
-			if (offset < 0 || offset >= data.Count)
+			if (offset < 0 || offset >= data.LongCount)
 				throw new IndexOutOfRangeException();
 
-			return new AsciiChar((char)data[(int)offset]);
+			return new AsciiChar((char)data[offset]);
 		}
 
 		public override string ToString()
@@ -62,26 +62,28 @@ namespace Hexalyzer.Datatypes
 			Value = val;
 		}
 
-		public static AsciiString FromData(IReadOnlyList<byte> data, long offset = 0)
+		public static AsciiString FromData(IAccessor<byte> data, long offset = 0)
 		{
-			if (offset < 0 || offset >= data.Count)
+			if (offset < 0 || offset >= data.LongCount)
 				throw new IndexOutOfRangeException();
 
-			if (offset + 4 < data.Count)
+			if (offset + 4 < data.LongCount)
 			{
 				int len = Helpers.ToInt32(data, offset);
 				offset += 4;
-				if (len > 0 && len <= 4096 && offset + len <= data.Count)
+				if (len > 0 && len <= 4096 && offset + len <= data.LongCount)
 				{
-					//DataBuffer<byte,byte[]>.Accessor accessor = data as DataBuffer<byte,byte[]>.Accessor;
-					FileBuffer<byte>.Accessor accessor = data as FileBuffer<byte>.Accessor;
-					if (accessor[offset + len - 1] == 0)
+					if (data[offset + len - 1] == 0)
 					{
 						//TODO: Check if this .ToArray() is a bottleneck or not
-						return new AsciiString(Encoding.ASCII.GetString(data.ToArray(), (int)offset, len - 1));
+						//return new AsciiString(Encoding.ASCII.GetString(data.ToArray(), (int)offset, len - 1));
+						//=> Now passing a shifted accessor
+						IAccessor<byte> shifted = data[offset, len];
+						return new AsciiString(Encoding.ASCII.GetString(shifted.ToArray(), 0, len - 1));
 					}
 				}
 			}
+
 			return null;
 		}
 
@@ -95,12 +97,14 @@ namespace Hexalyzer.Datatypes
 
 		public string Value { get; internal set; }
 
-		public static int LengthOf(IReadOnlyList<byte> data, long offset)
+		public static int LengthOf(IAccessor<byte> data, long offset)
 		{
 			int len = Helpers.ToInt32(data, offset);
 			if (len < 0)
 				throw new ArgumentException();
-			return 4 + len;
+			if (len > 0)
+				len += 4;
+			return len;
 		}
 	}
 
@@ -122,26 +126,28 @@ namespace Hexalyzer.Datatypes
 			Value = val;
 		}
 
-		public static WideString FromData(IReadOnlyList<byte> data, long offset = 0)
+		public static WideString FromData(IAccessor<byte> data, long offset = 0)
 		{
-			if (offset < 0 || offset >= data.Count)
+			if (offset < 0 || offset >= data.LongCount)
 				throw new IndexOutOfRangeException();
 
-			if (offset + 4 < data.Count)
+			if (offset + 4 < data.LongCount)
 			{
 				int len = Helpers.ToInt32(data, offset);
 				offset += 4;
-				if (len > 0 && len <= 4096 && offset + (len * 2) <= data.Count)
+				if (len > 0 && len <= 4096 && offset + (len * 2) <= data.LongCount)
 				{
-					//DataBuffer<byte,byte[]>.Accessor accessor = data as DataBuffer<byte,byte[]>.Accessor;
-					FileBuffer<byte>.Accessor accessor = data as FileBuffer<byte>.Accessor;
-					if (accessor[offset + (len * 2) - 2] == 0 && accessor[offset + (len * 2) - 1] == 0)
+					if (data[offset + (len * 2) - 2] == 0 && data[offset + (len * 2) - 1] == 0)
 					{
 						//TODO: Check if this .ToArray() is a bottleneck or not
-						return new WideString(Encoding.Unicode.GetString(data.ToArray(), (int)offset, len - 1));// Is this len or len*2 for unicode?
+						//return new WideString(Encoding.Unicode.GetString(data.ToArray(), (int)offset, (len - 1) * 2));
+						//=> Now passing a shifted accessor
+						IAccessor<byte> shifted = data[offset, len * 2];
+						return new WideString(Encoding.Unicode.GetString(shifted.ToArray(), 0, (len - 1) * 2));
 					}
 				}
 			}
+
 			return null;
 		}
 
@@ -155,12 +161,14 @@ namespace Hexalyzer.Datatypes
 
 		public string Value { get; internal set; }
 
-		public static int LengthOf(IReadOnlyList<byte> data, long offset)
+		public static int LengthOf(IAccessor<byte> data, long offset)
 		{
 			int len = Helpers.ToInt32(data, offset);
 			if (len < 0)
 				throw new ArgumentException();
-			return 4 + len;
+			if (len > 0)
+				len += 4;
+			return len;
 		}
 	}
 
@@ -183,43 +191,46 @@ namespace Hexalyzer.Datatypes
 			Value = val;
 		}
 
-		public static VarString FromData(IReadOnlyList<byte> data, long offset = 0)
+		public static VarString FromData(IAccessor<byte> data, long offset = 0)
 		{
-			if (offset < 0 || offset >= data.Count)
+			if (offset < 0 || offset >= data.LongCount)
 				throw new IndexOutOfRangeException();
 
-			if (offset + 4 < data.Count)
+			if (offset + 4 < data.LongCount)
 			{
 				int len = Helpers.ToInt32(data, offset);
 				offset += 4;
 				if (len < 0)
 				{
 					len = (-len);
-					if (len <= 4096 && offset + (len * 2) <= data.Count)
+					if (len <= 4096 && offset + (len * 2) <= data.LongCount)
 					{
-						//DataBuffer<byte,byte[]>.Accessor accessor = data as DataBuffer<byte,byte[]>.Accessor;
-						FileBuffer<byte>.Accessor accessor = data as FileBuffer<byte>.Accessor;
-						if (accessor[offset + (len * 2) - 2] == 0 && accessor[offset + (len * 2) - 1] == 0)
+						if (data[offset + (len * 2) - 2] == 0 && data[offset + (len * 2) - 1] == 0)
 						{
 							//TODO: Check if this .ToArray() is a bottleneck or not
-							return new VarString(Encoding.Unicode.GetString(data.ToArray(), (int)offset, (len - 1) * 2));
+							//return new VarString(Encoding.Unicode.GetString(data.ToArray(), (int)offset, (len - 1) * 2));
+							//=> Now passing a shifted accessor
+							IAccessor<byte> shifted = data[offset, len * 2];
+							return new VarString(Encoding.Unicode.GetString(shifted.ToArray(), 0, (len - 1) * 2));
 						}
 					}
 				}
 				else if (len > 0)
 				{
-					if (len <= 4096 && offset + len <= data.Count)
+					if (len <= 4096 && offset + len <= data.LongCount)
 					{
-						//DataBuffer<byte,byte[]>.Accessor accessor = data as DataBuffer<byte,byte[]>.Accessor;
-						FileBuffer<byte>.Accessor accessor = data as FileBuffer<byte>.Accessor;
-						if (accessor[offset + len - 1] == 0)
+						if (data[offset + len - 1] == 0)
 						{
 							//TODO: Check if this .ToArray() is a bottleneck or not
-							return new VarString(Encoding.ASCII.GetString(data.ToArray(), (int)offset, len - 1));
+							//return new VarString(Encoding.ASCII.GetString(data.ToArray(), (int)offset, len - 1));
+							//=> Now passing a shifted accessor
+							IAccessor<byte> shifted = data[offset, len];
+							return new VarString(Encoding.ASCII.GetString(shifted.ToArray(), 0, len - 1));
 						}
 					}
 				}
 			}
+
 			return null;
 		}
 
@@ -233,7 +244,7 @@ namespace Hexalyzer.Datatypes
 
 		public string Value { get; internal set; }
 
-		public static int LengthOf(IReadOnlyList<byte> data, long offset)
+		public static int LengthOf(IAccessor<byte> data, long offset)
 		{
 			int len = Helpers.ToInt32(data, offset);
 			if (len == 0)
@@ -248,56 +259,56 @@ namespace Hexalyzer.Datatypes
 	public static class Helpers
 	{
 
-		public static bool ToBoolean(IReadOnlyList<byte> data, long offset)
+		public static bool ToBoolean(IAccessor<byte> data, long offset)
 		{
-			return data[(int)offset] != 0;
+			return data[offset] != 0;
 		}
 
-		public static sbyte ToSByte(IReadOnlyList<byte> data, long offset)
+		public static sbyte ToSByte(IAccessor<byte> data, long offset)
 		{
-			return (sbyte)data[(int)offset];
+			return (sbyte)data[offset];
 		}
-		public static byte ToByte(IReadOnlyList<byte> data, long offset)
+		public static byte ToByte(IAccessor<byte> data, long offset)
 		{
-			return data[(int)offset];
+			return data[offset];
 		}
 
-		public static char ToChar(IReadOnlyList<byte> data, long offset)
+		public static char ToChar(IAccessor<byte> data, long offset)
 		{
 			return (char)ToUInt16(data, offset);
 		}
 
-		public static short ToInt16(IReadOnlyList<byte> data, long offset)
+		public static short ToInt16(IAccessor<byte> data, long offset)
 		{
-			return (short)((data[(int)offset + 1] << 8) + data[(int)offset]);
+			return (short)((data[offset + 1] << 8) + data[offset]);
 		}
-		public static ushort ToUInt16(IReadOnlyList<byte> data, long offset)
+		public static ushort ToUInt16(IAccessor<byte> data, long offset)
 		{
-			return (ushort)((data[(int)offset + 1] << 8) + data[(int)offset]);
-		}
-
-		public static int ToInt32(IReadOnlyList<byte> data, long offset)
-		{
-			int value = data[(int)offset + 3];
-			value = (value << 8) + data[(int)offset + 2];
-			value = (value << 8) + data[(int)offset + 1];
-			value = (value << 8) + data[(int)offset];
-			return value;
-		}
-		public static uint ToUInt32(IReadOnlyList<byte> data, long offset)
-		{
-			uint value = data[(int)offset + 3];
-			value = (value << 8) + data[(int)offset + 2];
-			value = (value << 8) + data[(int)offset + 1];
-			value = (value << 8) + data[(int)offset];
-			return value;
+			return (ushort)((data[offset + 1] << 8) + data[offset]);
 		}
 
-		public static long ToInt64(IReadOnlyList<byte> data, long offset)
+		public static int ToInt32(IAccessor<byte> data, long offset)
+		{
+			int value = data[offset + 3];
+			value = (value << 8) + data[offset + 2];
+			value = (value << 8) + data[offset + 1];
+			value = (value << 8) + data[offset];
+			return value;
+		}
+		public static uint ToUInt32(IAccessor<byte> data, long offset)
+		{
+			uint value = data[offset + 3];
+			value = (value << 8) + data[offset + 2];
+			value = (value << 8) + data[offset + 1];
+			value = (value << 8) + data[offset];
+			return value;
+		}
+
+		public static long ToInt64(IAccessor<byte> data, long offset)
 		{
 			return (((long)ToUInt32(data, offset + 4)) << 32) + ToUInt32(data, offset);
 		}
-		public static ulong ToUInt64(IReadOnlyList<byte> data, long offset)
+		public static ulong ToUInt64(IAccessor<byte> data, long offset)
 		{
 			return (((ulong)ToUInt32(data, offset + 4)) << 32) + ToUInt32(data, offset);
 		}
@@ -314,9 +325,9 @@ namespace Hexalyzer.Datatypes
 		/// <param name="data">Data used to form value</param>
 		/// <param name="offset">Optional offset into data</param>
 		/// <returns>String representation</returns>
-		public static string ToString(Type type, IReadOnlyList<byte> data, long offset = 0)
+		public static string ToString(Type type, IAccessor<byte> data, long offset = 0)
 		{
-			if (offset < 0 || offset >= data.Count)
+			if (offset < 0 || offset >= data.LongCount)
 				throw new IndexOutOfRangeException();
 
 			if (type == null)
@@ -335,14 +346,14 @@ namespace Hexalyzer.Datatypes
 					case "Char":		return ToChar(data, offset).ToString();
 					case "SByte":		return ToSByte(data, offset).ToString("G");
 					case "Byte":		return ToByte(data, offset).ToString("X2") + "h";
-					case "Int16":		if (offset + 2 <= data.Count) return ToInt16(data, offset).ToString("G"); else break;
-					case "UInt16":		if (offset + 2 <= data.Count) return ToUInt16(data, offset).ToString("X4") + "h"; else break;
-					case "Int32":		if (offset + 4 <= data.Count) return ToInt32(data, offset).ToString("G"); else break;
-					case "UInt32":		if (offset + 4 <= data.Count) return ToUInt32(data, offset).ToString("X8") + "h"; else break;
-					case "Int64":		if (offset + 8 <= data.Count) return ToInt64(data, offset).ToString("G"); else break;
-					case "UInt64":		if (offset + 8 <= data.Count) return ToUInt64(data, offset).ToString("X16") + "h"; else break;
-				//	case "Single":		if (offset + 4 <= data.Count) return ToSingle(data, offset).ToString(); else break;
-				//	case "Double":		if (offset + 8 <= data.Count) return ToDouble(data, offset).ToString(); else break;
+					case "Int16":		if (offset + 2 <= data.LongCount) return ToInt16(data, offset).ToString("G"); else break;
+					case "UInt16":		if (offset + 2 <= data.LongCount) return ToUInt16(data, offset).ToString("X4") + "h"; else break;
+					case "Int32":		if (offset + 4 <= data.LongCount) return ToInt32(data, offset).ToString("G"); else break;
+					case "UInt32":		if (offset + 4 <= data.LongCount) return ToUInt32(data, offset).ToString("X8") + "h"; else break;
+					case "Int64":		if (offset + 8 <= data.LongCount) return ToInt64(data, offset).ToString("G"); else break;
+					case "UInt64":		if (offset + 8 <= data.LongCount) return ToUInt64(data, offset).ToString("X16") + "h"; else break;
+				//	case "Single":		if (offset + 4 <= data.LongCount) return ToSingle(data, offset).ToString(); else break;
+				//	case "Double":		if (offset + 8 <= data.LongCount) return ToDouble(data, offset).ToString(); else break;
 
 					case "AsciiChar":	obj = AsciiChar.FromData(data, offset); if (obj != null) return obj.ToString(); else break;
 					case "AsciiString": obj = AsciiString.FromData(data, offset); if (obj != null) return obj.ToString(); else break;
@@ -383,14 +394,14 @@ namespace Hexalyzer.Datatypes
 		/// <param name="offset">Offset into data (in case type is of varying length like VarString)</param>
 		/// <returns>Number of bytes for given type, or -1 if none found (or error occured)</returns>
 		//public static int LengthOf(Type type, byte[] data, long offset)
-		public static int LengthOf(Type type, IReadOnlyList<byte> data, long offset)
+		public static long LengthOf(Type type, IAccessor<byte> data, long offset)
 		{
-			if (data == null || data.Count == 0 || 
-				offset < 0 || offset >= data.Count)
+			if (data == null || data.LongCount == 0 || 
+				offset < 0 || offset >= data.LongCount)
 				return -1;
 
 			if (type == null)
-				return data.Count - (int)offset;
+				return data.LongCount - offset;
 
 			//TODO: Replace with more dynamic reflection
 			switch(type.Name)

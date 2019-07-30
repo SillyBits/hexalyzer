@@ -108,7 +108,7 @@ namespace Hexalyzer
 		{
 			public _Type this[long index] { get { return Parent[index + Offset]; } }
 
-			public IAccessor<_Type> this[long index, long count] { get { return new Accessor(Parent, index, count); } }
+			public IAccessor<_Type> this[long index, long count] { get { return new Accessor(Parent, index + Offset, count); } }
 
 			public long LongCount { get { return Length; } }
 

@@ -2108,7 +2108,7 @@ namespace Hexalyzer
 				return null;
 
 			int len = Helpers.ToInt32(data, offset);
-			if (len == 0)
+			if (len == 0 || len == int.MaxValue || len == int.MinValue)
 				return null;
 
 			long ofs = offset + 4;
@@ -2117,7 +2117,7 @@ namespace Hexalyzer
 			{
 				len = -len;
 				return Analyzers.IsWideString(data, ofs, len)
-					? new Analyzers.Finding(typeof(VarString), offset, (len * 2) + 4)
+					? new Analyzers.Finding(typeof(WideString), offset, (len * 2) + 4)
 					: null
 					;
 			}

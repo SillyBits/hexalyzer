@@ -386,13 +386,7 @@ namespace Hexalyzer
 			if (type_s == null)
 				return;
 
-			Type type = Type.GetType(type_s);
-			if (type == null)
-				type = Type.GetType("System." + type_s);
-			if (type == null)
-				type = Type.GetType("Hexalyzer.Datatypes." + type_s);
-			if (type == null)
-				return;
+			Type type = Datatypes.Registry.Get(type_s);
 
 			PrjView.AddResource(type);
 		}

@@ -525,6 +525,18 @@ namespace Hexalyzer.Datatypes
 		}
 
 		/// <summary>
+		/// Reverse name lookup by type
+		/// </summary>
+		/// <param name="type">Type to lookup</param>
+		/// <returns>Registered name, or null if not registered</returns>
+		internal static string Name(Type type)
+		{
+			if (_Types.ContainsValue(type))
+				return _Types.First(pair => pair.Value == type).Key;
+			return null;
+		}
+
+		/// <summary>
 		/// Get registered datatype
 		/// </summary>
 		/// <param name="name">Name of type</param>

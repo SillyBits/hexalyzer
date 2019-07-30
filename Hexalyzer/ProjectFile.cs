@@ -930,10 +930,11 @@ namespace Hexalyzer
 
 			if (Type != null)
 			{
-				if (Type.GetInterface("IDatatype") != null)
-					element.SetAttribute("type", Type.FullName);
-				else
-					element.SetAttribute("type", Type.Name);
+				string type_s = Datatypes.Registry.Name(Type);
+				if (type_s == null)
+					type_s = Type.FullName;
+
+				element.SetAttribute("type", type_s);
 			}
 
 			if (!string.IsNullOrEmpty(Remark))

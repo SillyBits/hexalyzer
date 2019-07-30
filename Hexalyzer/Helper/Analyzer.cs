@@ -44,40 +44,40 @@ namespace Hexalyzer.Helper
 		{
 			if (minlen <= 8 && maxlen >= 8 && offset + 8 <= data.LongCount)
 			{
-				if (sign >= 0 && Helpers.ToUInt64(data, offset) == (ulong)value)
+				if (sign >= 0 && SystemType.FromData<ulong>(data, offset) == (ulong)value)
 					return typeof(ulong);
 
-				if (sign <= 0 && Helpers.ToInt64(data, offset) == value)
+				if (sign <= 0 && SystemType.FromData<long>(data, offset) == value)
 					return typeof(long);
 			}
 
 			if (minlen <= 4 && maxlen >= 4 && value <= uint.MaxValue && offset + 4 <= data.LongCount)
 			{
-				if (sign >= 0 && Helpers.ToUInt32(data, offset) == value)
+				if (sign >= 0 && SystemType.FromData<uint>(data, offset) == value)
 					return typeof(uint);
 
 				if (sign <= 0 && value <= int.MaxValue)
-					if (Helpers.ToInt32(data, offset) == value)
+					if (SystemType.FromData<int>(data, offset) == value)
 						return typeof(int);
 			}
 
 			if (minlen <= 2 && maxlen >= 2 && value < ushort.MaxValue && offset + 2 <= data.LongCount)
 			{
-				if (sign >= 0 && Helpers.ToUInt16(data, offset) == value)
+				if (sign >= 0 && SystemType.FromData<ushort>(data, offset) == value)
 					return typeof(ushort);
 
 				if (sign <= 0 && value <= short.MaxValue)
-					if (Helpers.ToInt16(data, offset) == value)
+					if (SystemType.FromData<short>(data, offset) == value)
 						return typeof(short);
 			}
 
 			if (minlen <= 1 && maxlen >= 1 && value < byte.MaxValue && offset + 1 <= data.LongCount)
 			{
-				if (sign >= 0 && Helpers.ToByte(data, offset) == value)
+				if (sign >= 0 && SystemType.FromData<byte>(data, offset) == value)
 					return typeof(byte);
 
 				if (sign <= 0 && value <= sbyte.MaxValue)
-					if (Helpers.ToSByte(data, offset) == value)
+					if (SystemType.FromData<sbyte>(data, offset) == value)
 						return typeof(sbyte);
 			}
 

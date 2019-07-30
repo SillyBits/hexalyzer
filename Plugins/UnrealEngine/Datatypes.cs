@@ -77,7 +77,7 @@ namespace UnrealEngine
 			if (offset + 4 > data.Count)
 				return false;
 
-			long len = T.Helpers.ToInt32(data, offset);
+			long len = T.SystemType.FromData<int>(data, offset);
 			long ofs = offset + 4;
 
 			if (len < 0)
@@ -102,7 +102,7 @@ namespace UnrealEngine
 
 		public static long LengthOf_(Hexalyzer.IAccessor<byte> data, long offset)
 		{
-			long len = T.Helpers.ToInt32(data, offset);
+			long len = T.SystemType.FromData<int>(data, offset);
 
 			if (len == 0)
 				return -1;
@@ -128,7 +128,7 @@ namespace UnrealEngine
 			if (offset + 4 > data.Count)
 				return null;
 
-			int len = T.Helpers.ToInt32(data, offset);
+			int len = T.SystemType.FromData<int>(data, offset);
 			long ofs = offset + 4;
 
 			if (len < 0)
@@ -237,7 +237,7 @@ namespace UnrealEngine
 			if (offset + 4 > data.Count)
 				return null;
 
-			uint hash = T.Helpers.ToUInt32(data, offset);
+			uint hash = T.SystemType.FromData<uint>(data, offset);
 			return new FStringWithHash(str, hash);
 		}
 

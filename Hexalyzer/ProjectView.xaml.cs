@@ -2107,7 +2107,7 @@ namespace Hexalyzer
 			if (offset + 4 > data.LongCount)
 				return null;
 
-			int len = Helpers.ToInt32(data, offset);
+			int len = SystemType.FromData<int>(data, offset);
 			if (len == 0 || len == int.MaxValue || len == int.MinValue)
 				return null;
 

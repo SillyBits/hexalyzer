@@ -70,25 +70,20 @@
 
 				<MenuItem Header="Split at position" InputGestureText="+" Tag="-" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Split.png" />
+						<Image Source="Resources/Resource.Split.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 
 				<Separator />
 
-				<MenuItem Header="Add auto-string" InputGestureText="S" Tag="VarString" Click="Resource_Add">
-					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.String.Var.png" />
-					</MenuItem.Icon>
-				</MenuItem>
 				<MenuItem Header="Add ascii string" InputGestureText="A" Tag="AsciiString" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.String.Ascii.png" />
+						<Image Source="Resources/Datatype.AsciiString.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add unicode string" InputGestureText="U" Tag="WideString" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.String.Wide.png" />
+						<Image Source="Resources/Datatype.WideString.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 
@@ -96,12 +91,12 @@
 
 				<MenuItem Header="Add ascii char" Tag="AsciiChar" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Char.Ascii.png" />
+						<Image Source="Resources/Datatype.AsciiChar.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add unicode char" Tag="Char" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Char.Wide.png" />
+						<Image Source="Resources/Datatype.System.Char.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 
@@ -109,42 +104,42 @@
 
 				<MenuItem Header="Add 8bit signed" InputGestureText="1" Tag="SByte" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.Int8.png" />
+						<Image Source="Resources/Datatype.System.Int8.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add 8bit unsigned" InputGestureText="Shift+1" Tag="Byte" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.UInt8.png" />
+						<Image Source="Resources/Datatype.System.UInt8.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add 16bit signed" InputGestureText="2" Tag="Int16" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.Int16.png" />
+						<Image Source="Resources/Datatype.System.Int16.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add 16bit unsigned" InputGestureText="Shift+2" Tag="UInt16" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.UInt16.png" />
+						<Image Source="Resources/Datatype.System.UInt16.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add 32bit signed" InputGestureText="4" Tag="Int32" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.Int32.png" />
+						<Image Source="Resources/Datatype.System.Int32.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add 32bit unsigned" InputGestureText="Shift+4" Tag="UInt32" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.UInt32.png" />
+						<Image Source="Resources/Datatype.System.UInt32.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add 64bit signed" InputGestureText="8" Tag="Int64" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.Int64.png" />
+						<Image Source="Resources/Datatype.System.Int64.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add 64bit unsigned" InputGestureText="Shift+8" Tag="UInt64" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.UInt64.png" />
+						<Image Source="Resources/Datatype.System.UInt64.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 
@@ -152,30 +147,20 @@
 
 				<MenuItem Header="Add float" InputGestureText="F" Tag="Single" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.Single.png" />
+						<Image Source="Resources/Datatype.System.Single.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 				<MenuItem Header="Add double" InputGestureText="D" Tag="Double" Click="Resource_Add">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Number.Double.png" />
+						<Image Source="Resources/Datatype.System.Double.png" />
 					</MenuItem.Icon>
 				</MenuItem>
-
-				<!--
-				<Separator />
-
-				<MenuItem Header="Add user-defined structure" InputGestureText="U" Tag="Structure" Click="Resource_Add">
-					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Add.Structure.png" />
-					</MenuItem.Icon>
-				</MenuItem>
-				-->
 				
 				<Separator />
 
 				<MenuItem Header="Remove" InputGestureText="Del" Click="Resource_Remove">
 					<MenuItem.Icon>
-						<Image Source="Resources/Toolbar.Remove.png" />
+						<Image Source="Resources/Resource.Remove.png" />
 					</MenuItem.Icon>
 				</MenuItem>
 
@@ -284,70 +269,67 @@
 			<ToolBar x:Name="Resource_ToolBar" Band="1" BandIndex="2">
 
 				<Button ToolTip="Split at position (+)" Tag="-" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Split.png" />
+					<Image Source="Resources/Resource.Split.png" />
 				</Button>
 
 				<Separator />
 
-				<Button ToolTip="Add auto-string (S)" Tag="VarString" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.String.Var.png" />
-				</Button>
 				<Button ToolTip="Add ascii string (A)" Tag="AsciiString" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.String.Ascii.png" />
+					<Image Source="Resources/Datatype.AsciiString.png" />
 				</Button>
 				<Button ToolTip="Add unicode string (U)" Tag="WideString" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.String.Wide.png" />
+					<Image Source="Resources/Datatype.WideString.png" />
 				</Button>
 
 				<Separator />
 
 				<Button ToolTip="Add ascii char" Tag="AsciiChar" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Char.Ascii.png" />
+					<Image Source="Resources/Datatype.AsciiChar.png" />
 				</Button>
 				<Button ToolTip="Add unicode char" Tag="Char" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Char.Wide.png" />
+					<Image Source="Resources/Datatype.System.Char.png" />
 				</Button>
 
 				<Separator/>
 
 				<Button ToolTip="Add 8bit signed (1)" Tag="SByte" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.Int8.png" />
+					<Image Source="Resources/Datatype.System.Int8.png" />
 				</Button>
 				<Button ToolTip="Add 8bit unsigned (Shift+1)" Tag="Byte" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.UInt8.png" />
+					<Image Source="Resources/Datatype.System.UInt8.png" />
 				</Button>
 				<Button ToolTip="Add 16bit signed (2)" Tag="Int16" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.Int16.png" />
+					<Image Source="Resources/Datatype.System.Int16.png" />
 				</Button>
 				<Button ToolTip="Add 16bit unsigned (Shift+2)" Tag="UInt16" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.UInt16.png" />
+					<Image Source="Resources/Datatype.System.UInt16.png" />
 				</Button>
 				<Button ToolTip="Add 32bit signed (4)" Tag="Int32" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.Int32.png" />
+					<Image Source="Resources/Datatype.System.Int32.png" />
 				</Button>
 				<Button ToolTip="Add 32bit unsigned (Shift+4)" Tag="UInt32" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.UInt32.png" />
+					<Image Source="Resources/Datatype.System.UInt32.png" />
 				</Button>
 				<Button ToolTip="Add 64bit signed (8)" Tag="Int64" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.Int64.png" />
+					<Image Source="Resources/Datatype.System.Int64.png" />
 				</Button>
 				<Button ToolTip="Add 64bit unsigned (Shift+8)" Tag="UInt64" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.UInt64.png" />
+					<Image Source="Resources/Datatype.System.UInt64.png" />
 				</Button>
 
 				<Separator />
 
 				<Button ToolTip="Add float (F)" Tag="Single" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.Single.png" />
+					<Image Source="Resources/Datatype.System.Single.png" />
 				</Button>
 				<Button ToolTip="Add double (D)" Tag="Double" Click="Resource_Add">
-					<Image Source="Resources/Toolbar.Add.Number.Double.png" />
+					<Image Source="Resources/Datatype.System.Double.png" />
 				</Button>
 
 				<Separator />
 
 				<Button ToolTip="Remove (Del)" Click="Resource_Remove">
-					<Image Source="Resources/Toolbar.Remove.png" />
+					<Image Source="Resources/Resource.Remove.png" />
 				</Button>
 
 			</ToolBar>

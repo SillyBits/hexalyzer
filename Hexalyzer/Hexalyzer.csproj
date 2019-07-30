@@ -160,52 +160,41 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\icons8\Toolbar.File.Close.png" />
-    <Resource Include="Resources\Toolbar.Add.Number.Int16.png" />
-    <Resource Include="Resources\Toolbar.Add.Number.Int32.png" />
-    <Resource Include="Resources\Toolbar.Add.Number.Int64.png" />
-    <Resource Include="Resources\Toolbar.Add.Number.Int8.png" />
-    <Resource Include="Resources\Toolbar.Add.Number.Single.png" />
-    <Resource Include="Resources\Toolbar.Add.Number.UInt16.png" />
-    <Resource Include="Resources\Toolbar.Add.Number.UInt32.png" />
-    <Resource Include="Resources\Toolbar.Add.Number.UInt64.png" />
-    <Resource Include="Resources\Toolbar.Add.Number.UInt8.png" />
-    <Resource Include="Resources\Toolbar.Add.String.Var.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Toolbar.Add.String.Wide.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Toolbar.Add.String.Ascii.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Toolbar.Add.Char.Wide.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Toolbar.Add.Char.Ascii.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Toolbar.Add.Number.Double.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Toolbar.Remove.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\icons8\Toolbar.File.New.png" />
-    <Resource Include="Resources\icons8\Toolbar.File.Open.png" />
-    <Resource Include="Resources\icons8\Toolbar.File.Save.png" />
+    <Resource Include="Resources\Datatype.AsciiChar.png" />
+    <Resource Include="Resources\Datatype.AsciiString.png" />
+    <Resource Include="Resources\Datatype.System.Char.png" />
+    <Resource Include="Resources\Datatype.System.Double.png" />
+    <Resource Include="Resources\Datatype.System.Int16.png" />
+    <Resource Include="Resources\Datatype.System.Int32.png" />
+    <Resource Include="Resources\Datatype.System.Int64.png" />
+    <Resource Include="Resources\Datatype.System.Int8.png" />
+    <Resource Include="Resources\Datatype.System.Single.png" />
+    <Resource Include="Resources\Datatype.System.UInt16.png" />
+    <Resource Include="Resources\Datatype.System.UInt32.png" />
+    <Resource Include="Resources\Datatype.System.UInt64.png" />
+    <Resource Include="Resources\Datatype.System.UInt8.png" />
+    <Resource Include="Resources\Datatype.WideString.png" />
+    <Resource Include="Resources\Resource.Remove.png" />
+    <Resource Include="Resources\Resource.Split.png" />
+    <Resource Include="Resources\Toolbar.View.DataBufferInfo.png" />
+    <Resource Include="Resources\Toolbar.View.ProjectViewInfo.png" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\About.res" />
     <Content Include="Resources\Changelog.res" />
-    <Content Include="Resources\icons8\Readme.txt" />
-    <Resource Include="Resources\Toolbar.View.ProjectViewInfo.png" />
+  </ItemGroup>
+  <ItemGroup>
     <Resource Include="Resources\Logo-128x128.ico" />
-    <Resource Include="Resources\icons8\Toolbar.Tool.Analyze.png" />
-    <Resource Include="Resources\Toolbar.Add.Split.png" />
-    <Resource Include="Resources\Toolbar.View.DataBufferInfo.png" />
-    <Resource Include="Resources\icons8\Toolbar.View.ValuePreview.png" />
     <Resource Include="Resources\Logo-128x128.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\icons8\Readme.txt" />
+    <Resource Include="Resources\icons8\Toolbar.File.Close.png" />
+    <Resource Include="Resources\icons8\Toolbar.File.New.png" />
+    <Resource Include="Resources\icons8\Toolbar.File.Open.png" />
+    <Resource Include="Resources\icons8\Toolbar.File.Save.png" />
+    <Resource Include="Resources\icons8\Toolbar.Tool.Analyze.png" />
+    <Resource Include="Resources\icons8\Toolbar.View.ValuePreview.png" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -151,7 +151,7 @@ namespace Hexalyzer.Tools
 
 			add("AsciiString", new NodeValuePreview<Datatypes.AsciiString>());
 			add("WideString", new NodeValuePreview<Datatypes.WideString>());
-			add("VarString", new NodeValuePreview<Datatypes.VarString>());
+			//add("VarString", new NodeValuePreview<Datatypes.VarString>());
 
 			addSep();
 

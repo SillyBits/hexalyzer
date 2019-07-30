@@ -31,11 +31,14 @@ namespace Hexalyzer.Plugin
 	/// </summary>
 	public interface IDatatype
 	{
-		string Name { get; }
-		ImageSource Icon { get; }
+		//static string Name;
+		//static ImageSource Icon;
+		//static IDatatype Empty;
+
+		object Value { get; }
+		long Length { get; }
 
 		// Sadfully, no static methods allowed, so one has to use a fake instance to access those :(
-		IDatatype Empty { get; }
 		bool IsValid(IAccessor<byte> data, long offset);
 		long LengthOf(IAccessor<byte> data, long offset);
 		IDatatype FromData(IAccessor<byte> data, long offset);

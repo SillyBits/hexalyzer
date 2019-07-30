@@ -907,18 +907,7 @@ namespace Hexalyzer
 			if (length < 0)
 				throw new Exception("INVALID PROJECT NODE! (missing length)");
 
-			Type type = null;
-			if (!string.IsNullOrEmpty(type_s))
-			{
-				if (type == null)
-					type = Type.GetType(type_s);
-				if (type == null)
-					type = Type.GetType("System." + type_s);
-				if (type == null)
-					type = Type.GetType("Hexalyzer.Datatypes." + type_s);
-				if (type == null)
-					type = Plugin.PluginHandler.GetDatatype(type_s);
-			}
+			Type type = type = Datatypes.Registry.Get(type_s);
 
 			return new ProjectNode(parent, offset, length, type, element.InnerText);
 		}

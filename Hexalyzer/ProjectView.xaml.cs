@@ -705,7 +705,7 @@ namespace Hexalyzer
 						case Key.OemPlus:
 						case Key.Add: AddResource(null); break;
 
-						case Key.S: AddResource(typeof(VarString)); break;
+						//case Key.S: AddResource(typeof(VarString)); break;
 						case Key.A: AddResource(typeof(AsciiString)); break;
 						case Key.U: AddResource(typeof(WideString)); break;
 

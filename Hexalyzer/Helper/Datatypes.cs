@@ -2,74 +2,427 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Win32;
+using System.Windows.Media;
+
+
+using Hexalyzer.Plugin;
+using Attr = Hexalyzer.Plugin.Attributes;
 
 
 namespace Hexalyzer.Datatypes
 {
-
-	public class AsciiChar
+	/// <summary>
+	/// Basic implementation for data types using attributes
+	/// </summary>
+	/// <typeparam name="_Derived">Derived class</typeparam>
+	/// <typeparam name="_Type">Internal data storage type</typeparam>
+	public abstract class DatatypeBase<_Derived, _Type> : IDatatype
+		where _Derived : IDatatype, new()
 	{
-		public AsciiChar()
+
+		public DatatypeBase() { _Value = default(_Type); }
+		public DatatypeBase(_Type value) { _Value = value; }
+
+		// IDatatype
+		//
+
+		public static string      Name  = Attr.Name.Get(typeof(_Derived));
+		public static ImageSource Icon  = Attr.IconRef.Get(typeof(_Derived));
+		public static IDatatype   Empty = new _Derived();
+
+		public virtual object Value { get { return _Value; } }
+		public abstract long Length { get; }
+
+		// Sadfully, no static methods allowed, so one has to use a fake instance to access those :(
+		public virtual bool IsValid(IAccessor<byte> data, long offset) { return (0 <= offset && offset + LengthOf(data, offset) <= data.LongCount); }
+		public virtual long LengthOf(IAccessor<byte> data, long offset) { return (_Value != null) ? Length : 0; }
+		public abstract IDatatype FromData(IAccessor<byte> data, long offset);
+
+		protected _Type _Value;
+
+	}
+	
+
+	public static class SystemType
+	{
+		#region Raw conversion
+		// As return value isn't part of the "signature equation", we're implementing the converters using an additional
+		// "(dynamic)_Type" parameter to both get our typed signature and prevent generic to be choosen at compile-time.
+		// Another generic is used to pass this.
+		public static _Type FromData<_Type>(IAccessor<byte> data, long offset)
 		{
-			Value = null;
+			return Convert(data, offset, (dynamic)default(_Type));
 		}
 
-		public AsciiChar(char val)
+		public static _Type Convert<_Type>(IAccessor<byte> data, long offset, _Type _)
 		{
-			Value = val;
+			throw new NotImplementedException(string.Format("Convert: No specialisation for type '{0}' found!", typeof(_Type)));
 		}
 
-		public static AsciiChar FromData(IAccessor<byte> data, long offset = 0)
+		public static bool Convert(IAccessor<byte> data, long offset, bool _) { return (data[offset] != 0); }
+
+		public static sbyte Convert(IAccessor<byte> data, long offset, sbyte _) { return (sbyte)data[offset]; }
+		public static byte Convert(IAccessor<byte> data, long offset, byte _) { return data[offset]; }
+
+		public static char Convert(IAccessor<byte> data, long offset, char _) { return (char)Convert(data, offset, default(ushort)); }
+
+		public static short Convert(IAccessor<byte> data, long offset, short _) { return (short)((data[offset + 1] << 8) + data[offset]); }
+		public static ushort Convert(IAccessor<byte> data, long offset, ushort _) { return (ushort)((data[offset + 1] << 8) + data[offset]); }
+
+		public static int Convert(IAccessor<byte> data, long offset, int _)
 		{
-			if (offset < 0 || offset >= data.LongCount)
+			int val = data[offset + 3];
+			val = (val << 8) + data[offset + 2];
+			val = (val << 8) + data[offset + 1];
+			val = (val << 8) + data[offset];
+			return val;
+		}
+		public static uint Convert(IAccessor<byte> data, long offset, uint _)
+		{
+			uint val = data[offset + 3];
+			val = (val << 8) + data[offset + 2];
+			val = (val << 8) + data[offset + 1];
+			val = (val << 8) + data[offset];
+			return val;
+		}
+
+		public static long Convert(IAccessor<byte> data, long offset, long _)
+		{
+			long val = data[offset + 7];
+			val = (val << 8) + data[offset + 6];
+			val = (val << 8) + data[offset + 5];
+			val = (val << 8) + data[offset + 4];
+			val = (val << 8) + data[offset + 3];
+			val = (val << 8) + data[offset + 2];
+			val = (val << 8) + data[offset + 1];
+			val = (val << 8) + data[offset];
+			return val;
+		}
+		public static ulong Convert(IAccessor<byte> data, long offset, ulong _)
+		{
+			ulong val = data[offset + 7];
+			val = (val << 8) + data[offset + 6];
+			val = (val << 8) + data[offset + 5];
+			val = (val << 8) + data[offset + 4];
+			val = (val << 8) + data[offset + 3];
+			val = (val << 8) + data[offset + 2];
+			val = (val << 8) + data[offset + 1];
+			val = (val << 8) + data[offset];
+			return val;
+		}
+
+		//TODO: Add own converter?
+		public static float Convert(IAccessor<byte> data, long offset, float _)
+		{
+			IAccessor<byte> shifted = data[offset, data.LongCount - offset];
+			return BitConverter.ToSingle(shifted.ToArray(), 0);
+		}
+		public static double Convert(IAccessor<byte> data, long offset, double _)
+		{
+			IAccessor<byte> shifted = data[offset, data.LongCount - offset];
+			return BitConverter.ToDouble(shifted.ToArray(), 0);
+		}
+
+		#endregion
+
+		#region Length
+		// Retrieving lengths for system types. 
+		// Note that one has to pass an additional type parameter which MUST be casted to (dynamic) to prevent
+		// compiler from choosing generic version over specialisation.
+
+		public static long Length<_Type>(_Type val)
+		{
+			throw new NotImplementedException(string.Format("Length: No specialisation for type '{0}' found!", typeof(_Type)));
+		}
+
+		public static long Length(bool val) { return 1; }
+
+		public static long Length(sbyte val) { return 1; }
+		public static long Length(byte val) { return 1; }
+
+		public static long Length(char val) { return 2; }
+
+		public static long Length(short val) { return 2; }
+		public static long Length(ushort val) { return 2; }
+
+		public static long Length(int val) { return 4; }
+		public static long Length(uint val) { return 4; }
+
+		public static long Length(long val) { return 8; }
+		public static long Length(ulong val) { return 8; }
+
+		public static long Length(float val) { return 4; }
+		public static long Length(double val) { return 8; }
+
+		#endregion
+
+		#region To string conversion
+		// Conversion into displayable string
+
+		public static string ToStr<_Type>(_Type val)
+		{
+			throw new NotImplementedException();
+		}
+
+		public static string ToStr(bool val) { return val.ToString(); }
+
+		public static string ToStr(sbyte val) { return val.ToString("G"); }
+		public static string ToStr(byte val) { return val.ToString("X2") + "h"; }
+
+		public static string ToStr(char val) { return "[" + val + "]"; }
+
+		public static string ToStr(short val) { return val.ToString("G"); }
+		public static string ToStr(ushort val) { return val.ToString("X4") + "h"; }
+
+		public static string ToStr(int val) { return val.ToString("G"); }
+		public static string ToStr(uint val) { return val.ToString("X8") + "h"; }
+
+		public static string ToStr(long val) { return val.ToString("G"); }
+		public static string ToStr(ulong val) { return val.ToString("X16") + "h"; }
+
+		//TODO: Find suitable format strings
+		public static string ToStr(float val) { return val.ToString(); }
+		public static string ToStr(double val) { return val.ToString(); }
+
+		#endregion
+
+		[Attr.Name(nameof(_Type)), Attr.IconRef("Datatype.System." + nameof(_Type) + ".png")]
+		public class Wrapper<_Type> : DatatypeBase<Wrapper<_Type>, _Type>
+		{
+
+			public Wrapper() : base() { }
+			public Wrapper(_Type val) : base(val) { }
+
+			public override string ToString() { return ToStr((dynamic)_Value); }
+
+			public override long Length { get { return _Length; } }
+
+			public override bool IsValid(IAccessor<byte> data, long offset) { return IsValid_(data, offset); }
+
+			public static bool IsValid_(IAccessor<byte> data, long offset) { return (0 <= offset && offset + _Length <= data.LongCount); }
+
+			public override long LengthOf(IAccessor<byte> data, long offset) { return LengthOf_(data, offset); }
+
+			public static long LengthOf_(IAccessor<byte> data, long offset) { return IsValid_(data, offset) ? _Length : 0; }
+
+			public override IDatatype FromData(IAccessor<byte> data, long offset) { return FromData_(data, offset); }
+
+			public static IDatatype FromData_(IAccessor<byte> data, long offset)
+			{
+				return new Wrapper<_Type>(FromData<_Type>(data, offset));
+			}
+
+			private static long _Length = Length((dynamic)default(_Type));
+		}
+
+	}
+
+
+	[Attr.Name("Ascii char"), Attr.IconRef("Datatype.AsciiChar.png")]
+	public class AsciiChar : DatatypeBase<AsciiChar, char>
+	{
+		public AsciiChar() : base() { }
+		public AsciiChar(char val) : base(val) { }
+
+		public override string ToString()
+		{
+			return "[" + _Value + "]";
+		}
+
+		public override long Length { get { return 1; } }
+
+		public override IDatatype FromData(IAccessor<byte> data, long offset)
+		{
+			return FromData_(data, offset);
+		}
+
+		public static AsciiChar FromData_(IAccessor<byte> data, long offset)
+		{
+			if (offset < 0 || offset + 1 > data.LongCount)
 				throw new IndexOutOfRangeException();
 
 			return new AsciiChar((char)data[offset]);
 		}
 
-		public override string ToString()
-		{
-			return "'" + Value + "'";
-		}
-
-		public char? Value { get; internal set; }
 	}
 
-
-	// Pascal-like ascii string with leading length (Int32)
-	public class AsciiString
+	// Simple ascii string, terminated by null char
+	[Attr.Name("Ascii string"), Attr.IconRef("Datatype.AsciiString.png")]
+	public class AsciiString : DatatypeBase<AsciiString, string>
 	{
-		public AsciiString()
+		public AsciiString() : base() { }
+		public AsciiString(string val) : base(val) { }
+
+		public override string ToString()
 		{
-			Value = null;
+			if (_Value == null)
+				return "<NULL>";
+			if (_Value[0] == 0)
+				return "<empty>";
+			return "'" + _Value + "'";
 		}
 
-		public AsciiString(string val)
+		public override long Length
 		{
-			Value = val;
+			get
+			{
+				long len = 0;
+				if (_Value != null)
+					len = _Value.Length + 1;
+				return len;
+			}
 		}
 
-		public static AsciiString FromData(IAccessor<byte> data, long offset = 0)
+		public override long LengthOf(IAccessor<byte> data, long offset)
 		{
-			if (offset < 0 || offset >= data.LongCount)
+			return LengthOf_(data, offset);
+		}
+
+		public static long LengthOf_(IAccessor<byte> data, long offset)
+		{
+			int length = 0;
+
+			// Scan up until null-terminator found, or max. allowed length exceeded
+			while (length <= MAX_LENGTH)
+			{
+				if (offset + length > data.LongCount)
+				{
+					length = -1;
+					break;
+				}
+
+				byte b = data[offset + length];
+
+				if (!Helper.Analyzers.IsAsciiChar(b))
+					break;
+
+				length++;
+
+				if (b == 0)
+					break;
+			}
+
+			return length;
+		}
+
+		public override IDatatype FromData(IAccessor<byte> data, long offset)
+		{
+			return FromData_(data, offset, -1);
+		}
+
+		public static AsciiString FromData_(IAccessor<byte> data, long offset, long length)
+		{
+			if (offset < 0 || offset + length > data.LongCount)
 				throw new IndexOutOfRangeException();
 
-			if (offset + 4 < data.LongCount)
+			if (length <= 0)
 			{
-				int len = Helpers.ToInt32(data, offset);
-				offset += 4;
-				if (len > 0 && len <= 4096 && offset + len <= data.LongCount)
+				length = LengthOf_(data, offset);
+			}
+			if (length > 0 && length <= MAX_LENGTH && offset + length <= data.LongCount)
+			{
+				if (data[offset + length - 1] == 0)
 				{
-					if (data[offset + len - 1] == 0)
+					IAccessor<byte> shifted = data[offset, length];
+					return new AsciiString(Encoding.ASCII.GetString(shifted.ToArray(), 0, (int)(length - 1)));
+				}
+			}
+
+			return null;
+		}
+
+		private const int MAX_LENGTH = 4096;
+
+	}
+
+	// Simple unicode string, terminated by null char
+	[Attr.Name("Wide string"), Attr.IconRef("Datatype.WideString.png")]
+	public class WideString : DatatypeBase<WideString, string>
+	{
+		public WideString() : base() { }
+		public WideString(string val) : base(val) { }
+
+		public override string ToString()
+		{
+			if (_Value == null)
+				return "<NULL>";
+			if (_Value[0] == 0)
+				return "<empty>";
+			return "'" + _Value + "'";
+		}
+
+		public override long Length
+		{
+			get
+			{
+				long len = 0;
+				if (_Value != null)
+					len = _Value.Length + 1;
+				return len;
+			}
+		}
+
+		public override long LengthOf(IAccessor<byte> data, long offset)
+		{
+			return LengthOf_(data, offset);
+		}
+
+		public static int LengthOf_(IAccessor<byte> data, long offset)
+		{
+			int length = 0;
+
+			// Scan up until null-terminator found, or max. allowed length exceeded
+			while (length <= MAX_LENGTH)
+			{
+				if (offset + length > data.LongCount)
+				{
+					length = -1;
+					break;
+				}
+
+				byte b1 = data[offset + length];
+				byte b2 = data[offset + length + 1];
+
+				if (!Helper.Analyzers.IsWideChar(b1, b2))
+					break;
+
+				length += 2;
+
+				if (b1 == 0 && b2 == 0)
+					break;
+			}
+
+			return length;
+		}
+
+		public override IDatatype FromData(IAccessor<byte> data, long offset)
+		{
+			return FromData_(data, offset, -1);
+		}
+
+		public static WideString FromData_(IAccessor<byte> data, long offset, long length)
+		{
+			if (offset < 0 || offset + length > data.LongCount)
+				throw new IndexOutOfRangeException();
+
+			if (length <= 0)
+			{
+				length = LengthOf_(data, offset);
+				if (length > 0) // To comply with scale passed in: the no. of chars
+					length >>= 1;
+			}
+			if (length > 0)
+			{
+				length <<= 1;
+				if (length <= MAX_LENGTH && offset + length <= data.LongCount)
+				{
+					if (data[offset + length - 1] == 0 && data[offset + length - 2] == 0)
 					{
-						//TODO: Check if this .ToArray() is a bottleneck or not
-						//return new AsciiString(Encoding.ASCII.GetString(data.ToArray(), (int)offset, len - 1));
-						//=> Now passing a shifted accessor
-						IAccessor<byte> shifted = data[offset, len];
-						return new AsciiString(Encoding.ASCII.GetString(shifted.ToArray(), 0, len - 1));
+						IAccessor<byte> shifted = data[offset, length];
+						return new WideString(Encoding.Unicode.GetString(shifted.ToArray(), 0, (int)(length - 2)));
 					}
 				}
 			}
@@ -77,196 +430,51 @@ namespace Hexalyzer.Datatypes
 			return null;
 		}
 
-		public override string ToString()
-		{
-			if (Value == null)
-				return "<NULL>";
-			//return "[" + Value.Length.ToString() + "]'" + Value + "'";
-			return Value[0] != 0 ? "'" + Value + "'" : "<empty>";
-		}
+		private const int MAX_LENGTH = 4096;
 
-		public string Value { get; internal set; }
-
-		public static int LengthOf(IAccessor<byte> data, long offset)
-		{
-			int len = Helpers.ToInt32(data, offset);
-			if (len < 0)
-				throw new ArgumentException();
-			if (len > 0)
-				len += 4;
-			return len;
-		}
 	}
-
-	// Pascal-like unicode string with leading length (Int32)
-	public class WideString
-	{
-		public WideString()
-		{
-			Value = null;
-		}
-
-		public WideString(string val)
-		{
-			Value = val;
-		}
-
-		public static WideString FromData(IAccessor<byte> data, long offset = 0)
-		{
-			if (offset < 0 || offset >= data.LongCount)
-				throw new IndexOutOfRangeException();
-
-			if (offset + 4 < data.LongCount)
-			{
-				int len = Helpers.ToInt32(data, offset);
-				offset += 4;
-				if (len > 0 && len <= 4096 && offset + (len * 2) <= data.LongCount)
-				{
-					if (data[offset + (len * 2) - 2] == 0 && data[offset + (len * 2) - 1] == 0)
-					{
-						//TODO: Check if this .ToArray() is a bottleneck or not
-						//return new WideString(Encoding.Unicode.GetString(data.ToArray(), (int)offset, (len - 1) * 2));
-						//=> Now passing a shifted accessor
-						IAccessor<byte> shifted = data[offset, len * 2];
-						return new WideString(Encoding.Unicode.GetString(shifted.ToArray(), 0, (len - 1) * 2));
-					}
-				}
-			}
-
-			return null;
-		}
-
-		public override string ToString()
-		{
-			if (Value == null)
-				return "<NULL>";
-			//return "[" + Value.Length.ToString() + "]'" + Value + "'";
-			return Value[0] != 0 ? "'" + Value + "'" : "<empty>";
-		}
-
-		public string Value { get; internal set; }
-
-		public static int LengthOf(IAccessor<byte> data, long offset)
-		{
-			int len = Helpers.ToInt32(data, offset);
-			if (len < 0)
-				throw new ArgumentException();
-			if (len > 0)
-				len += 4;
-			return len;
-		}
-	}
-
-	// Pascal-like string with leading length (Int32)
-	// Either AnsiString (len>0) or WideString (len<0)
-	public class VarString
-	{
-		public VarString()
-		{
-			Value = null;
-		}
-
-		public VarString(string val)
-		{
-			Value = val;
-		}
-
-		public static VarString FromData(IAccessor<byte> data, long offset = 0)
-		{
-			if (offset < 0 || offset >= data.LongCount)
-				throw new IndexOutOfRangeException();
-
-			if (offset + 4 < data.LongCount)
-			{
-				int len = Helpers.ToInt32(data, offset);
-				offset += 4;
-				if (len < 0)
-				{
-					len = (-len);
-					if (len <= 4096 && offset + (len * 2) <= data.LongCount)
-					{
-						if (data[offset + (len * 2) - 2] == 0 && data[offset + (len * 2) - 1] == 0)
-						{
-							//TODO: Check if this .ToArray() is a bottleneck or not
-							//return new VarString(Encoding.Unicode.GetString(data.ToArray(), (int)offset, (len - 1) * 2));
-							//=> Now passing a shifted accessor
-							IAccessor<byte> shifted = data[offset, len * 2];
-							return new VarString(Encoding.Unicode.GetString(shifted.ToArray(), 0, (len - 1) * 2));
-						}
-					}
-				}
-				else if (len > 0)
-				{
-					if (len <= 4096 && offset + len <= data.LongCount)
-					{
-						if (data[offset + len - 1] == 0)
-						{
-							//TODO: Check if this .ToArray() is a bottleneck or not
-							//return new VarString(Encoding.ASCII.GetString(data.ToArray(), (int)offset, len - 1));
-							//=> Now passing a shifted accessor
-							IAccessor<byte> shifted = data[offset, len];
-							return new VarString(Encoding.ASCII.GetString(shifted.ToArray(), 0, len - 1));
-						}
-					}
-				}
-			}
-
-			return null;
-		}
-
-		public override string ToString()
-		{
-			if (Value == null)
-				return "<NULL>";
-			//return "[" + Value.Length.ToString() + "]'" + Value + "'";
-			return Value[0] != 0 ? "'" + Value + "'" : "<empty>";
-		}
-
-		public string Value { get; internal set; }
-
-		public static int LengthOf(IAccessor<byte> data, long offset)
-		{
-			int len = Helpers.ToInt32(data, offset);
-			if (len == 0)
-				return 0;
-			if (len < 0)
-				len = (-len) * 2;
-			return 4 + len;
-		}
-	}
-
+	
 
 	public static class Helpers
 	{
+		// Old-style, to be removed
+		//
 
+		[Obsolete]
 		public static bool ToBoolean(IAccessor<byte> data, long offset)
 		{
 			return data[offset] != 0;
 		}
 
+		[Obsolete]
 		public static sbyte ToSByte(IAccessor<byte> data, long offset)
 		{
 			return (sbyte)data[offset];
 		}
+		[Obsolete]
 		public static byte ToByte(IAccessor<byte> data, long offset)
 		{
 			return data[offset];
 		}
 
+		[Obsolete]
 		public static char ToChar(IAccessor<byte> data, long offset)
 		{
 			return (char)ToUInt16(data, offset);
 		}
 
+		[Obsolete]
 		public static short ToInt16(IAccessor<byte> data, long offset)
 		{
 			return (short)((data[offset + 1] << 8) + data[offset]);
 		}
+		[Obsolete]
 		public static ushort ToUInt16(IAccessor<byte> data, long offset)
 		{
 			return (ushort)((data[offset + 1] << 8) + data[offset]);
 		}
 
+		[Obsolete]
 		public static int ToInt32(IAccessor<byte> data, long offset)
 		{
 			int value = data[offset + 3];
@@ -275,6 +483,7 @@ namespace Hexalyzer.Datatypes
 			value = (value << 8) + data[offset];
 			return value;
 		}
+		[Obsolete]
 		public static uint ToUInt32(IAccessor<byte> data, long offset)
 		{
 			uint value = data[offset + 3];
@@ -284,10 +493,12 @@ namespace Hexalyzer.Datatypes
 			return value;
 		}
 
+		[Obsolete]
 		public static long ToInt64(IAccessor<byte> data, long offset)
 		{
 			return (((long)ToUInt32(data, offset + 4)) << 32) + ToUInt32(data, offset);
 		}
+		[Obsolete]
 		public static ulong ToUInt64(IAccessor<byte> data, long offset)
 		{
 			return (((ulong)ToUInt32(data, offset + 4)) << 32) + ToUInt32(data, offset);
@@ -307,7 +518,7 @@ namespace Hexalyzer.Datatypes
 		/// <returns>String representation</returns>
 		public static string ToString(Type type, IAccessor<byte> data, long offset = 0)
 		{
-			if (offset < 0 || offset >= data.LongCount)
+			if (0 > offset || offset >= data.LongCount)
 				throw new IndexOutOfRangeException();
 
 			if (type == null)
@@ -316,54 +527,15 @@ namespace Hexalyzer.Datatypes
 			if (data == null)
 				return "<NULL>";
 
-			//TODO: Replace with more dynamic reflection
 			try
 			{
-				object obj;
-				switch (type.Name)
-				{
-					case "Boolean":		return ToBoolean(data, offset).ToString();
-					case "Char":		return ToChar(data, offset).ToString();
-					case "SByte":		return ToSByte(data, offset).ToString("G");
-					case "Byte":		return ToByte(data, offset).ToString("X2") + "h";
-					case "Int16":		if (offset + 2 <= data.LongCount) return ToInt16(data, offset).ToString("G"); else break;
-					case "UInt16":		if (offset + 2 <= data.LongCount) return ToUInt16(data, offset).ToString("X4") + "h"; else break;
-					case "Int32":		if (offset + 4 <= data.LongCount) return ToInt32(data, offset).ToString("G"); else break;
-					case "UInt32":		if (offset + 4 <= data.LongCount) return ToUInt32(data, offset).ToString("X8") + "h"; else break;
-					case "Int64":		if (offset + 8 <= data.LongCount) return ToInt64(data, offset).ToString("G"); else break;
-					case "UInt64":		if (offset + 8 <= data.LongCount) return ToUInt64(data, offset).ToString("X16") + "h"; else break;
-				//	case "Single":		if (offset + 4 <= data.LongCount) return ToSingle(data, offset).ToString(); else break;
-				//	case "Double":		if (offset + 8 <= data.LongCount) return ToDouble(data, offset).ToString(); else break;
-
-					case "AsciiChar":	obj = AsciiChar.FromData(data, offset); if (obj != null) return obj.ToString(); else break;
-					case "AsciiString": obj = AsciiString.FromData(data, offset); if (obj != null) return obj.ToString(); else break;
-					case "WideString":	obj = WideString.FromData(data, offset); if (obj != null) return obj.ToString(); else break;
-					case "VarString":	obj = VarString.FromData(data, offset); if (obj != null) return obj.ToString(); else break;
-				}
-
-				if (type.GetInterface("IDatatype") != null)
-				{
-					try
-					{
-						Plugin.IDatatype datatype = Activator.CreateInstance(type) as Plugin.IDatatype;
-						if (datatype != null)
-							datatype = datatype.FromData(data, offset);
-						if (datatype != null)
-							return datatype.ToString();
-					}
-					catch (Exception)
-					{
-						//string msg = string.Format("Unable to create instance of type {0}!", 
-						//	type.FullName);
-						//Debug.Fail(msg);
-					}
-				}
+				IDatatype instance = Registry.Instance(type, data, offset);
+				if (instance != null)
+					return instance.ToString();
 			}
-			catch (Exception)
-			{ }
+			catch { }
 
-			return "";
-			//throw new ArgumentException(string.Format("Unknown type {0}", type));
+			throw new ArgumentException(string.Format("Unknown type {0}", type));
 		}
 
 		/// <summary>
@@ -373,7 +545,6 @@ namespace Hexalyzer.Datatypes
 		/// <param name="data">Data (in case type is of varying length like {Ansi|Wide|Var}String)</param>
 		/// <param name="offset">Offset into data (in case type is of varying length like VarString)</param>
 		/// <returns>Number of bytes for given type, or -1 if none found (or error occured)</returns>
-		//public static int LengthOf(Type type, byte[] data, long offset)
 		public static long LengthOf(Type type, IAccessor<byte> data, long offset)
 		{
 			if (data == null || data.LongCount == 0 || 
@@ -383,46 +554,138 @@ namespace Hexalyzer.Datatypes
 			if (type == null)
 				return data.LongCount - offset;
 
-			//TODO: Replace with more dynamic reflection
-			switch(type.Name)
+			try
 			{
-				case "Boolean":		return 1;
-
-				case "AsciiChar":	return 1;
-				case "Char":		return 2;
-
-				case "SByte":		return 1;
-				case "Byte":		return 1;
-				case "Int16":		return 2;
-				case "UInt16":		return 2;
-				case "Int32":		return 4;
-				case "UInt32":		return 4;
-				case "Int64":		return 8;
-				case "UInt64":		return 8;
-			//	case "Single":		return 4;
-			//	case "Double":		return 8;
-
-				case "AsciiString":	return AsciiString.LengthOf(data, offset);
-				case "WideString":	return WideString.LengthOf(data, offset);
-				case "VarString":	return VarString.LengthOf(data, offset);
+				IDatatype instance = Registry.Instance(type, data, offset);
+				if (instance != null)
+					return instance.LengthOf(data, offset);
 			}
-
-			if (type.GetInterface("IDatatype") != null)
-			{
-				try
-				{
-					Plugin.IDatatype datatype = Activator.CreateInstance(type) as Plugin.IDatatype;
-					return (int)datatype.LengthOf(data, offset);
-				}
-				catch (Exception)
-				{
-					string msg = string.Format("Unable to create instance of type {0}!", 
-						type.FullName);
-					Debug.Fail(msg);
-				}
-			}
+			catch { }
 
 			throw new ArgumentException(string.Format("Unknown type {0}", type));
 		}
 	}
+
+
+	/// <summary>
+	/// Global datatype registry
+	/// </summary>
+	internal static class Registry
+	{
+
+		/// <summary>
+		/// Register new datatype
+		/// </summary>
+		/// <param name="name">Name of type</param>
+		/// <param name="type">Type</param>
+		internal static void Add(string name, Type type)
+		{
+			_Types.Add(name, type);
+		}
+
+		/// <summary>
+		/// Checks if datatype is registered or not
+		/// </summary>
+		/// <param name="name">Name of type</param>
+		/// <returns>Outcome</returns>
+		internal static bool Has(string name)
+		{
+			if (name == null)
+				return false;
+			return _Types.ContainsKey(name);
+		}
+
+		/// <summary>
+		/// Get registered datatype
+		/// </summary>
+		/// <param name="name">Name of type</param>
+		/// <returns>Type, or null if not found</returns>
+		internal static Type Get(string name)
+		{
+			Type type = null;
+			if (name != null && !_Types.TryGetValue(name, out type))
+				type = null;
+			return type;
+		}
+
+		internal static IDatatype Instance(string name)
+		{
+			Type type = Get(name);
+			return Activator.CreateInstance(type) as IDatatype;
+		}
+
+		internal static IDatatype Instance(Type type, IAccessor<byte> data, long offset, long length = 0)
+		{
+			if (type.GetInterface("IDatatype") == null)
+			{
+				// A base type was passed in, convert to wrapper
+				type = Get(type.FullName);
+			}
+
+			IDatatype instance = null;
+
+			try
+			{
+				// Favour static "FromData_" method
+				MethodInfo method = type.GetMethod("FromData_", new Type[] { typeof(IAccessor<byte>), typeof(long) } );//, BindingFlags.Static);
+				if (method != null)
+				{
+					if (method.GetParameters().Length == 2)
+						instance = method.Invoke(null, new object[] { data, offset } ) as IDatatype;
+					else
+						instance = method.Invoke(null, new object[] { data, offset, length } ) as IDatatype;
+				}
+				else
+				{
+					// Favour static "Empty" field before creating temporary instance
+					FieldInfo field = type.GetField("Empty");//, BindingFlags.Static);
+					if (field != null)
+						instance = field.GetValue(null) as IDatatype;
+					else
+						instance = Activator.CreateInstance(type) as IDatatype;
+
+					if (instance != null)
+						instance = instance.FromData(data, offset);
+				}
+			}
+			catch
+			{
+				instance = null;
+			}
+
+			return instance;
+		}
+
+
+		static Registry()
+		{
+			Add(nameof(Boolean)		, typeof(SystemType.Wrapper<bool>));
+
+			Add(nameof(AsciiChar)	, typeof(AsciiChar));
+			Add(nameof(Char)		, typeof(SystemType.Wrapper<char>));
+
+			Add(nameof(SByte)		, typeof(SystemType.Wrapper<sbyte>));
+			Add(nameof(Byte)		, typeof(SystemType.Wrapper<byte>));
+
+			Add(nameof(Int16)		, typeof(SystemType.Wrapper<short>));
+			Add(nameof(UInt16)		, typeof(SystemType.Wrapper<ushort>));
+
+			Add(nameof(Int32)		, typeof(SystemType.Wrapper<int>));
+			Add(nameof(UInt32)		, typeof(SystemType.Wrapper<uint>));
+
+			Add(nameof(Int64)		, typeof(SystemType.Wrapper<long>));
+			Add(nameof(UInt64)		, typeof(SystemType.Wrapper<ulong>));
+
+			Add(nameof(Single)		, typeof(SystemType.Wrapper<float>));
+			Add(nameof(Double)		, typeof(SystemType.Wrapper<double>));
+
+			Add(nameof(AsciiString)	, typeof(AsciiString));
+			Add(nameof(WideString)	, typeof(WideString));
+		}
+
+
+		private static Dictionary<string, Type> _Types = new Dictionary<string, Type>();
+
+	}
+
 }

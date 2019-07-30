@@ -619,7 +619,10 @@ namespace Hexalyzer.Datatypes
 			if (type.GetInterface("IDatatype") == null)
 			{
 				// A base type was passed in, convert to wrapper
-				type = Get(type.FullName);
+				Type org = type;
+				type = Get(org.FullName);
+				if (type == null)
+					type = Get(org.Name);
 			}
 
 			IDatatype instance = null;

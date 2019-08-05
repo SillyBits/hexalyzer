@@ -1896,7 +1896,11 @@ namespace Hexalyzer
 			int row_index = FindRowIndexByOffset(offset, false);
 			//if (row_index < _FirstVisible)
 			if (row_index < 0)
-					return null;
+			{
+				Row last = this[_Rows.Count - 1];
+				if (offset >= (last.Offset + last.Length))
+					row_index = _Rows.Count - 1;
+			}
 
 			Row row = this[row_index];
 			if (row == null)

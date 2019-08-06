@@ -62,7 +62,12 @@ namespace UnrealEngine
 			{
 				long len = 0;
 				if (_Value != null)
-					len = _Value.Length + 1 + 4;
+				{
+					len = _Value.Length;
+					if (len > 0) // Only Non-empty strings do have an terminator
+						len++;
+					len += 4;
+				}
 				return len;
 			}
 		}
@@ -86,10 +91,14 @@ namespace UnrealEngine
 				if (ofs + (len * 2) <= data.Count)
 					return H.Analyzers.IsWideString(data, ofs, len);
 			}
-			else if (len > 0)
+			else if (len >= 0)
 			{
 				if (ofs + len <= data.Count)
+				{
+					if (len == 0)
+						return true;
 					return H.Analyzers.IsAsciiString(data, ofs, len);
+				}
 			}
 
 			return false;
@@ -104,8 +113,8 @@ namespace UnrealEngine
 		{
 			long len = T.SystemType.FromData<int>(data, offset);
 
-			if (len == 0)
-				return -1;
+			//if (len == 0)
+			//	return -1;
 
 			if (len < 0)
 				len = (-len * 2) + 4;
@@ -138,9 +147,13 @@ namespace UnrealEngine
 				if (wstr != null)
 					return new FString(wstr);
 			}
-			else if (len > 0)
+			else if (len >= 0)
 			{
-				T.AsciiString astr = T.AsciiString.FromData_(data, ofs, len);
+				T.AsciiString astr;
+				if (len == 0)
+					astr = new T.AsciiString("");
+				else
+					astr = T.AsciiString.FromData_(data, ofs, len);
 				if (astr != null)
 					return new FString(astr);
 			}

@@ -603,28 +603,28 @@ namespace Hexalyzer.Datatypes
 
 		static Registry()
 		{
-			Add(nameof(Boolean)		, typeof(SystemType.Wrapper<bool>));
+			Add("Boolean"		, typeof(SystemType.Wrapper<bool>));
 
-			Add(nameof(AsciiChar)	, typeof(AsciiChar));
-			Add(nameof(Char)		, typeof(SystemType.Wrapper<char>));
+			Add("AsciiChar"		, typeof(AsciiChar));
+			Add("Char"			, typeof(SystemType.Wrapper<char>));
 
-			Add(nameof(SByte)		, typeof(SystemType.Wrapper<sbyte>));
-			Add(nameof(Byte)		, typeof(SystemType.Wrapper<byte>));
+			Add("SByte"			, typeof(SystemType.Wrapper<sbyte>));
+			Add("Byte"			, typeof(SystemType.Wrapper<byte>));
 
-			Add(nameof(Int16)		, typeof(SystemType.Wrapper<short>));
-			Add(nameof(UInt16)		, typeof(SystemType.Wrapper<ushort>));
+			Add("Int16"			, typeof(SystemType.Wrapper<short>));
+			Add("UInt16"		, typeof(SystemType.Wrapper<ushort>));
 
-			Add(nameof(Int32)		, typeof(SystemType.Wrapper<int>));
-			Add(nameof(UInt32)		, typeof(SystemType.Wrapper<uint>));
+			Add("Int32"			, typeof(SystemType.Wrapper<int>));
+			Add("UInt32"		, typeof(SystemType.Wrapper<uint>));
 
-			Add(nameof(Int64)		, typeof(SystemType.Wrapper<long>));
-			Add(nameof(UInt64)		, typeof(SystemType.Wrapper<ulong>));
+			Add("Int64"			, typeof(SystemType.Wrapper<long>));
+			Add("UInt64"		, typeof(SystemType.Wrapper<ulong>));
 
-			Add(nameof(Single)		, typeof(SystemType.Wrapper<float>));
-			Add(nameof(Double)		, typeof(SystemType.Wrapper<double>));
+			Add("Single"		, typeof(SystemType.Wrapper<float>));
+			Add("Double"		, typeof(SystemType.Wrapper<double>));
 
-			Add(nameof(AsciiString)	, typeof(AsciiString));
-			Add(nameof(WideString)	, typeof(WideString));
+			Add("AsciiString"	, typeof(AsciiString));
+			Add("WideString"	, typeof(WideString));
 		}
 
 

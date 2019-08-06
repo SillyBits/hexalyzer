@@ -61,7 +61,7 @@ namespace UnrealEngine
 		}
 
 
-		private static Type[] _Datatypes = new Type[] { typeof(FString), typeof(FStringWithHash), };
+		private static Type[] _Datatypes = new Type[] { typeof(FString), typeof(FStringWithHash), typeof(FGuid) };
 		private static Type[] _Panels    = null;//new Type[] { };
 		private static Type[] _Tools     = null;//new Type[] { };
 		private static Type[] _Analyzers = null;//new Type[] { };

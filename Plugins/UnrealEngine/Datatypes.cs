@@ -256,4 +256,88 @@ namespace UnrealEngine
 
 	}
 
+
+	[Attr.Name("Unreal FGuid"), Attr.IconRef("Datatype.FGuid.png")]
+	public class FGuid : T.DatatypeBase<FGuid, uint[]>
+	{
+
+		public FGuid() 
+			: base() 
+		{
+		}
+
+		public FGuid(uint[] value) 
+			: base() 
+		{
+			if (value.Length != 4)
+				throw new ArgumentException("Expected an array of 4!");
+			_Value = value;
+		}
+
+
+		public override string ToString()
+		{
+			if (_Value == null)
+				return "<NULL>";
+			return string.Format("{0:X8}.{1:X8}.{2:X8}.{3:X8}", 
+				_Value[0], _Value[1], _Value[2], _Value[3]);
+		}
+
+
+		// IDatatype
+		//
+
+		public override long Length
+		{
+			get
+			{
+				long len = 0;
+				if (_Value != null)
+					len = 4 * 4;
+				return len;
+			}
+		}
+
+		public override bool IsValid(Hexalyzer.IAccessor<byte> data, long offset)
+		{
+			return IsValid_(data, offset);
+		}
+
+		public static bool IsValid_(Hexalyzer.IAccessor<byte> data, long offset)
+		{
+			return (offset + (4 * 4) <= data.Count);
+		}
+
+		public override long LengthOf(Hexalyzer.IAccessor<byte> data, long offset)
+		{
+			return LengthOf_(data, offset);
+		}
+
+		public static long LengthOf_(Hexalyzer.IAccessor<byte> data, long offset)
+		{
+			return 4 * 4;
+		}
+
+		public override IDatatype FromData(Hexalyzer.IAccessor<byte> data, long offset)
+		{
+			return FromData_(data, offset);
+		}
+
+		public static IDatatype FromData_(Hexalyzer.IAccessor<byte> data, long offset)
+		{
+			if (offset + (4 * 4) > data.Count)
+				return null;
+
+			uint[] value = new uint[4];
+			value[0] = T.SystemType.FromData<uint>(data, offset + 0);
+			value[1] = T.SystemType.FromData<uint>(data, offset + 4);
+			value[2] = T.SystemType.FromData<uint>(data, offset + 8);
+			value[3] = T.SystemType.FromData<uint>(data, offset + 12);
+
+			return new FGuid(value);
+		}
+
+	}
+
+
 }

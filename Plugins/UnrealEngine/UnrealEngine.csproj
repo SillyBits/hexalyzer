@@ -59,6 +59,9 @@
   <ItemGroup>
     <Resource Include="Resources\Datatype.FString.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Datatype.FGuid.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy /Y $(TargetDir)$(TargetFileName) $(SolutionDir)\__plugins

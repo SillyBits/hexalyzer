@@ -531,9 +531,7 @@ namespace Hexalyzer.Datatypes
 		/// <returns>Registered name, or null if not registered</returns>
 		internal static string Name(Type type)
 		{
-			if (_Types.ContainsValue(type))
-				return _Types.First(pair => pair.Value == type).Key;
-			return null;
+			return _Types.FirstOrDefault(pair => pair.Value == type).Key;
 		}
 
 		/// <summary>
